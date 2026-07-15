@@ -3086,3 +3086,34 @@ body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
     width:100%;
   }
 }
+
+
+/* BUILD 614.4 — clean staged exchange and remove residual missing view */
+.missing-view-compat{
+  display:none!important;
+}
+.global-exchange-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+}
+.global-exchange-banner .cancel-global-exchange{
+  background:rgba(255,255,255,.12);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.16);
+}
+.global-exchange-banner .cancel-global-exchange:hover{
+  background:rgba(255,255,255,.18);
+}
+@media(max-width:600px){
+  .global-exchange-actions{
+    display:grid;
+    grid-template-columns:1fr 1.4fr;
+    width:100%;
+  }
+  .global-exchange-actions button{
+    width:100%;
+    padding:0 10px;
+  }
+}

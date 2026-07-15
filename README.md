@@ -1,9 +1,11 @@
-# World Cup 2026 — Build 614.3
+# World Cup 2026 — Build 614.4
 
-- Nueva opción `🌍 Todas las selecciones` dentro del selector.
-- Permite volver a la vista global después de filtrar por un país.
-- Pantalla Cambiar rediseñada:
-  - Intercambio manual visible y destacado.
-  - QR marcado como próxima función.
-- Eliminado el fragmento HTML roto que aparecía al final de la página.
-- Caché: `world-cup-2026-build-614-3`.
+Correcciones:
+- Botón `Cancelar` junto a `Revisar y confirmar`.
+- Cancelar descarta las selecciones preparadas.
+- La colección vuelve inmediatamente al modo normal `+ / −`.
+- Confirmar un intercambio también sale automáticamente del modo intercambio.
+- Eliminada la barra residual `Todos los cromos pendientes / Orden del álbum`.
+- Se conservan nodos internos ocultos para compatibilidad con la lógica anterior.
+
+Caché: `world-cup-2026-build-614-4`.

@@ -1,4 +1,4 @@
-const APP_VERSION="6.1.4.3";
+const APP_VERSION="6.1.4.4";
 const DATA_REVISION="2026-07-16-master-4";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -576,6 +576,26 @@ function stageFromMainList(type,team,code,button){
  showToast(`${team} ${code} · ${type==="give"?"dar":"recibir"} x${current+1}`);
 }
 
+
+function exitManualExchange({clear=true,message="Intercambio cancelado"}={}){
+ if(clear)exchange={give:{},receive:{}};
+ currentView="inventory";
+ currentFilter="all";
+ collectionFilter="all";
+ document.body.classList.remove("exchange-active");
+
+ document.querySelectorAll(".tab").forEach(button=>{
+   button.classList.toggle("active",button.dataset.filter==="all");
+ });
+ document.querySelectorAll(".collection-filter-button").forEach(button=>{
+   button.classList.toggle("active",button.dataset.collectionFilter==="all");
+ });
+
+ saveAll(message);
+ renderAll();
+ showToast(message);
+}
+
 function exchangeTotals(){
  return {
    give:Object.values(exchange.give).reduce((a,b)=>a+Number(b),0),
@@ -629,9 +649,9 @@ function renderExchangeDialogTabs(){
  renderExchangeSummary();
 }
 $("#cancelExchangeButton").onclick=()=>{
- if(confirm("¿Cancelar este intercambio? El inventario no cambiará.")){
-   exchange={give:{},receive:{}};saveAll("Intercambio cancelado");renderExchangeList();$("#exchangeDialog").close();renderAll();showToast("Intercambio cancelado");
- }
+ if(!confirm("¿Cancelar este intercambio? El inventario no cambiará."))return;
+ $("#exchangeDialog").close();
+ exitManualExchange();
 };
 $("#confirmExchangeButton").onclick=()=>{
  const totals=exchangeTotals();
@@ -652,7 +672,17 @@ $("#confirmExchangeButton").onclick=()=>{
    inventory[team][code]=next;markPendingSync(team,code,previous,next,"intercambio");history.push({id:crypto.randomUUID?.()||String(Date.now()+Math.random()),team,code,previous,next,delta:Number(qty),at:now});
    sessionStats.plus+=Number(qty);
  });
- exchange={give:{},receive:{}};saveAll("Intercambio confirmado");$("#exchangeDialog").close();renderAll();showToast("✓ Intercambio aplicado al inventario");
+ exchange={give:{},receive:{}};
+ currentView="inventory";
+ currentFilter="all";
+ collectionFilter="all";
+ document.body.classList.remove("exchange-active");
+ document.querySelectorAll(".tab").forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"));
+ document.querySelectorAll(".collection-filter-button").forEach(button=>button.classList.toggle("active",button.dataset.collectionFilter==="all"));
+ saveAll("Intercambio confirmado");
+ $("#exchangeDialog").close();
+ renderAll();
+ showToast("✓ Intercambio aplicado al inventario");
 };
 
 // --------------------
@@ -1473,6 +1503,13 @@ $("#openGlobalExchangeListButton").onclick=()=>{
  renderExchangeDialogTabs();
  renderExchangeList();
  $("#exchangeDialog").showModal();
+};
+
+
+$("#cancelGlobalExchangeButton").onclick=()=>{
+ const totals=exchangeTotals();
+ if((totals.give||totals.receive)&&!confirm("¿Cancelar este intercambio? Las selecciones marcadas se descartarán."))return;
+ exitManualExchange();
 };
 
 if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"));
