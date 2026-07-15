@@ -1,4 +1,4 @@
-const APP_VERSION="6.1.2";
+const APP_VERSION="6.1.3";
 const DATA_REVISION="2026-07-16-master-4";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -276,6 +276,12 @@ function renderCards(){
    q=Number(q)||0;if(matchesFilter(q))grid.appendChild(createCard(team,code,q));
  });
  emptyState.hidden=grid.children.length>0;
+}
+
+
+function updateSettingsTargetUI(){
+ const node=$("#settingsTargetValue");
+ if(node)node.textContent=String(getTarget());
 }
 
 function updateGlobalDashboard(){
@@ -1236,6 +1242,20 @@ function setupSettingsCenter(){
    if(event.target===dialog)dialog.close();
  });
 }
+
+
+$("#settingsTargetButton").onclick=()=>{
+ const current=getTarget();
+ const value=prompt("Objetivo de álbumes para este proyecto:",String(current));
+ if(value===null)return;
+ const next=Math.max(1,Math.min(20,Number(value)||current));
+ targetInput.value=String(next);
+ targetValue.textContent=String(next);
+ saveAll("Objetivo actualizado");
+ renderAll();
+ renderProjectsList();
+ showToast(`Objetivo actualizado a ${next}`);
+};
 
 if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"));
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});

@@ -1,11 +1,10 @@
-# World Cup 2026 — Build 612
+# World Cup 2026 — Build 613
 
-Rediseño de cromos:
-- Tarjetas premium.
-- Número protagonista.
-- Stock y estado mejor jerarquizados.
-- Controles + / − rediseñados.
-- DAR / RECIBIR más claros.
-- Feedback visual de pulsación.
-- Sin cambios en lógica ni datos.
-- Caché: `world-cup-2026-build-612`.
+Optimización móvil:
+- La Home muestra únicamente el total de `Cromos`.
+- Se eliminan visualmente `Faltan` y `Repetidos`.
+- El objetivo deja de ocupar espacio en la Home.
+- El objetivo se consulta y modifica desde Ajustes → Proyectos.
+- Se mantienen los cálculos internos y toda la lógica.
+- Mejor espaciado en iPhone.
+- Caché: `world-cup-2026-build-613`.

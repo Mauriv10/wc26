@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="World Cup 2026">
-  <title>World Cup 2026 · Build 612</title>
+  <title>World Cup 2026 · Build 613</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/world-cup-2026-apple-v522.png">
   <link rel="stylesheet" href="./styles.css">
@@ -27,42 +27,39 @@
     </div>
   </div>
 
-  <section class="premium-dashboard" aria-label="Resumen global">
-    <article class="premium-stat premium-stat-primary">
-      <span>Inventario</span>
-      <strong id="globalInventoryTotal">0</strong>
-      <small>cromos registrados</small>
-    </article>
-    <article class="premium-stat">
-      <span>Faltan</span>
-      <strong id="globalMissingTotal">0</strong>
-      <small>unidades pendientes</small>
-    </article>
-    <article class="premium-stat">
-      <span>Repetidos</span>
-      <strong id="globalRepeatsTotal">0</strong>
-      <small>disponibles para cambiar</small>
-    </article>
-  </section>
+  
+<section class="premium-dashboard premium-dashboard-single" aria-label="Resumen global">
+  <article class="premium-stat premium-stat-primary premium-stat-single">
+    <span>Cromos</span>
+    <strong id="globalInventoryTotal">0</strong>
+    <small>en el proyecto activo</small>
+  </article>
+  <span id="globalMissingTotal" hidden>0</span>
+  <span id="globalRepeatsTotal" hidden>0</span>
+</section>
 
-  <section class="premium-selection-row">
-    <button id="teamSelectorButton" class="premium-team-card" type="button">
-      <img id="currentTeamFlag" class="premium-team-flag" alt="">
-      <span class="premium-team-copy">
-        <small>Selección</small>
-        <strong id="currentTeamName">Seleccionar</strong>
-      </span>
-      <span class="premium-chevron">⌄</span>
-    </button>
-    <select id="teamSelect" hidden></select>
 
-    <button id="targetLockButton" class="premium-target-card" type="button">
-      <span>Objetivo</span>
-      <strong><span id="targetValue">5</span> álbumes</strong>
-      <small id="lockIcon">Bloqueado</small>
+  
+<section class="premium-selection-row premium-selection-row-single">
+  <button id="teamSelectorButton" class="premium-team-card" type="button">
+    <img id="currentTeamFlag" class="premium-team-flag" alt="">
+    <span class="premium-team-copy">
+      <small>Selección</small>
+      <strong id="currentTeamName">Seleccionar</strong>
+    </span>
+    <span class="premium-chevron">⌄</span>
+  </button>
+  <select id="teamSelect" hidden></select>
+
+  <div class="target-control-hidden" hidden>
+    <button id="targetLockButton" type="button">
+      <span id="targetValue">5</span>
+      <span id="lockIcon">Bloqueado</span>
     </button>
-    <input id="targetInput" type="number" min="1" max="20" value="5" hidden>
-  </section>
+    <input id="targetInput" type="number" min="1" max="20" value="5">
+  </div>
+</section>
+
 
   <div class="premium-search">
     <div class="search-wrap">
@@ -207,7 +204,16 @@
   <div class="settings-groups">
     <section class="settings-group">
       <div class="settings-group-title"><span class="settings-glyph blue">▣</span><div><strong>Proyectos</strong><small>Cambiar, crear y transferir repetidas</small></div></div>
-      <div id="settingsProjectsSlot" class="settings-slot"></div>
+      
+<div class="settings-target-card">
+  <div>
+    <span>Objetivo del proyecto</span>
+    <strong><span id="settingsTargetValue">5</span> álbumes</strong>
+  </div>
+  <button id="settingsTargetButton" type="button">Cambiar</button>
+</div>
+<div id="settingsProjectsSlot" class="settings-slot"></div>
+
     </section>
 
     <section class="settings-group">
