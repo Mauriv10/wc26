@@ -3835,3 +3835,147 @@ body::before{
     min-height:100vh;
   }
 }
+
+
+/* =========================================================
+   BUILD 615.11 — INDEPENDENT SETTINGS OVERLAY
+   ========================================================= */
+
+/* The dialog must never participate in page layout. */
+.settings-center{
+  position:fixed!important;
+  inset:auto!important;
+  left:50%!important;
+  bottom:0!important;
+  top:auto!important;
+  z-index:1000!important;
+
+  width:min(100vw,720px)!important;
+  max-width:100vw!important;
+  height:min(92dvh,920px)!important;
+  max-height:92dvh!important;
+
+  margin:0!important;
+  padding:0!important;
+  transform:translate(-50%,105%)!important;
+
+  display:none;
+  flex-direction:column;
+  overflow:hidden!important;
+
+  border:0!important;
+  border-radius:30px 30px 0 0!important;
+  background:#f5f5f7!important;
+  box-shadow:0 -24px 80px rgba(0,0,0,.24)!important;
+
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:
+    transform .24s cubic-bezier(.22,.75,.25,1),
+    opacity .18s ease,
+    visibility 0s linear .24s;
+}
+
+/* Only the single open dialog is visible. */
+.settings-center[open]{
+  display:flex!important;
+  transform:translate(-50%,0)!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  transition:
+    transform .24s cubic-bezier(.22,.75,.25,1),
+    opacity .18s ease,
+    visibility 0s;
+}
+
+.settings-center::backdrop{
+  background:rgba(23,23,26,.34);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+.settings-sheet-header{
+  position:relative!important;
+  top:auto!important;
+  flex:0 0 auto!important;
+  width:100%;
+  box-sizing:border-box;
+  z-index:3;
+}
+
+.settings-groups{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  width:100%;
+  box-sizing:border-box;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+}
+
+/* Never render Settings as content of any normal tab. */
+body.main-tab-collection > .settings-center:not([open]),
+body.main-tab-statistics > .settings-center:not([open]),
+body.main-tab-trade > .settings-center:not([open]){
+  display:none!important;
+}
+
+body.settings-overlay-open{
+  overflow:hidden!important;
+  touch-action:none;
+}
+
+body.settings-overlay-open .bottom-app-nav{
+  pointer-events:none;
+}
+
+/* Remove any accidental duplicated settings fragments in page flow. */
+#inventoryView .settings-center,
+#statisticsView .settings-center,
+#tradeView .settings-center,
+.main-tab-view .settings-center,
+.app-view .settings-center{
+  display:none!important;
+}
+
+@media(max-width:600px){
+  .settings-center{
+    width:100vw!important;
+    max-width:100vw!important;
+    height:calc(100dvh - max(8px,env(safe-area-inset-top)))!important;
+    max-height:calc(100dvh - max(8px,env(safe-area-inset-top)))!important;
+    border-radius:28px 28px 0 0!important;
+  }
+
+  .settings-sheet-header{
+    padding:
+      18px
+      20px
+      14px!important;
+  }
+
+  .settings-groups{
+    padding:
+      14px
+      10px
+      calc(34px + env(safe-area-inset-bottom))!important;
+  }
+}
+
+@supports not (height:100dvh){
+  .settings-center{
+    height:92vh!important;
+    max-height:92vh!important;
+  }
+
+  @media(max-width:600px){
+    .settings-center{
+      height:calc(100vh - 8px)!important;
+      max-height:calc(100vh - 8px)!important;
+    }
+  }
+}

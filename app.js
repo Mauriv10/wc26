@@ -1,4 +1,4 @@
-const APP_VERSION="6.1.5.10";
+const APP_VERSION="6.1.5.11";
 const DATA_REVISION="2026-07-16-master-4";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -505,7 +505,11 @@ function renderStatistics(){
 }
 function setMainTab(tab){
  if(tab==="settings"){
-   $("#settingsDialog").showModal();
+   const dialog=$("#settingsDialog");
+   if(dialog&&!dialog.open){
+     document.body.classList.add("settings-overlay-open");
+     dialog.showModal();
+   }
    return;
  }
  mainTab=tab;
@@ -1534,18 +1538,60 @@ $("#markSyncedButton").onclick=()=>{
 
 function setupSettingsCenter(){
  const dialog=$("#settingsDialog");
+ if(!dialog)return;
+
  const projectBar=document.querySelector(".project-bar");
  const syncCard=document.querySelector(".sync-card");
  const backupCard=document.querySelector(".backup-card");
  const actions=document.querySelector(".actions");
- if(projectBar)$("#settingsProjectsSlot").appendChild(projectBar);
- if(syncCard)$("#settingsSyncSlot").appendChild(syncCard);
- if(backupCard)$("#settingsBackupSlot").appendChild(backupCard);
- if(actions)$("#settingsActionsSlot").appendChild(actions);
- $("#settingsButton").onclick=()=>dialog.showModal();
- $("#closeSettingsDialog").onclick=()=>dialog.close();
+
+ if(projectBar&&!$("#settingsProjectsSlot").contains(projectBar)){
+   $("#settingsProjectsSlot").appendChild(projectBar);
+ }
+ if(syncCard&&!$("#settingsSyncSlot").contains(syncCard)){
+   $("#settingsSyncSlot").appendChild(syncCard);
+ }
+ if(backupCard&&!$("#settingsBackupSlot").contains(backupCard)){
+   $("#settingsBackupSlot").appendChild(backupCard);
+ }
+ if(actions&&!$("#settingsActionsSlot").contains(actions)){
+   $("#settingsActionsSlot").appendChild(actions);
+ }
+
+ const openSettings=()=>{
+   if(dialog.open)return;
+   document.body.classList.add("settings-overlay-open");
+   dialog.showModal();
+   const scrollArea=dialog.querySelector(".settings-groups");
+   if(scrollArea)scrollArea.scrollTop=0;
+ };
+
+ const closeSettings=()=>{
+   if(!dialog.open)return;
+   dialog.close();
+ };
+
+ const headerButton=$("#settingsButton");
+ if(headerButton)headerButton.onclick=openSettings;
+
+ document.querySelectorAll('.bottom-nav-button[data-main-view="settings"]').forEach(button=>{
+   button.onclick=openSettings;
+ });
+
+ const closeButton=$("#closeSettingsDialog");
+ if(closeButton)closeButton.onclick=closeSettings;
+
+ dialog.addEventListener("close",()=>{
+   document.body.classList.remove("settings-overlay-open");
+ });
+
+ dialog.addEventListener("cancel",event=>{
+   event.preventDefault();
+   closeSettings();
+ });
+
  dialog.addEventListener("click",event=>{
-   if(event.target===dialog)dialog.close();
+   if(event.target===dialog)closeSettings();
  });
 }
 

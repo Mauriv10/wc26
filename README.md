@@ -1,8 +1,13 @@
-# World Cup 2026 — Build 615.10
+# World Cup 2026 — Build 615.11
 
-Corrección visual para iPhone:
-- Elimina la franja gris de la parte superior.
-- Extiende el fondo azul claro hasta la zona segura.
-- Ajusta el `theme-color` para Safari y la PWA.
-- Mantiene el scroll de Ajustes corregido.
-- Caché: `world-cup-2026-build-615-10`.
+Corrección estructural de Ajustes:
+- Existe un único panel de Ajustes.
+- Se sitúa fuera de Cromos, Estadísticas y Cambiar.
+- Ya no aparece información de Ajustes dentro de otras pestañas.
+- Overlay fijo e independiente con fondo desenfocado.
+- Animación de entrada desde la parte inferior.
+- Scroll interno en iPhone.
+- Cierre con X, pulsación en el fondo o gesto del sistema.
+- Evita aperturas duplicadas y dos cabeceras superpuestas.
+
+Caché: `world-cup-2026-build-615-11`.
