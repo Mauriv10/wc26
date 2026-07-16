@@ -1,4 +1,4 @@
-const APP_VERSION="6.1.5.11";
+const APP_VERSION="6.1.5.12";
 const DATA_REVISION="2026-07-16-master-4";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -280,10 +280,12 @@ function createCard(team,code,qty){
  const minusButton=card.querySelector(".minus");
  const plusButton=card.querySelector(".plus");
  if(minusButton)minusButton.onclick=e=>{
+   showActionFeedback(e.currentTarget,currentView==="exchange"?"give":"minus",currentView==="exchange"?"DAR ✓":"−1");
    if(currentView==="exchange")stageFromMainList("give",team,code,e.currentTarget);
    else changeQuantity(team,code,-1,e.currentTarget);
  };
  if(plusButton)plusButton.onclick=e=>{
+   showActionFeedback(e.currentTarget,currentView==="exchange"?"receive":"plus",currentView==="exchange"?"RECIBIR ✓":"+1");
    if(currentView==="exchange")stageFromMainList("receive",team,code,e.currentTarget);
    else changeQuantity(team,code,1,e.currentTarget);
  };
@@ -371,6 +373,38 @@ function collectionStickerMatches(team,code,qty){
  if(effectiveFilter==="shiny")return isShinySticker(team,code);
  return true;
 }
+
+function showActionFeedback(button,type,label){
+ if(!button)return;
+ button.classList.remove("press-feedback");
+ void button.offsetWidth;
+ button.classList.add("press-feedback");
+
+ const card=button.closest(".collection-sticker,.sticker-card");
+ if(!card)return;
+
+ const positive=type==="plus"||type==="receive";
+ card.classList.remove("feedback-plus","feedback-minus");
+ void card.offsetWidth;
+ card.classList.add(positive?"feedback-plus":"feedback-minus");
+
+ card.querySelectorAll(".action-feedback").forEach(node=>node.remove());
+ const bubble=document.createElement("span");
+ bubble.className=`action-feedback ${type}`;
+ bubble.textContent=label;
+ card.appendChild(bubble);
+
+ setTimeout(()=>{
+   bubble.remove();
+   card.classList.remove("feedback-plus","feedback-minus");
+   button.classList.remove("press-feedback");
+ },760);
+
+ if(navigator.vibrate){
+   navigator.vibrate(positive?[18]:[12,22,12]);
+ }
+}
+
 function createGlobalSticker(team,code,qty){
  const state=stateFor(qty);
  const item=document.createElement("article");
@@ -395,9 +429,9 @@ function createGlobalSticker(team,code,qty){
        return;
      }
      setExchangeQty(type,team,code,current+1);
-     vibrate();
+     showActionFeedback(button,type,type==="give"?"DAR ✓":"RECIBIR ✓");
      saveAll("Intercambio preparado");
-     renderAll();
+     setTimeout(()=>renderAll(),130);
      showToast(`${team} ${code} · ${type==="give"?"dar":"recibir"} x${current+1}`);
    });
  }else{
@@ -411,8 +445,8 @@ function createGlobalSticker(team,code,qty){
      history.push({id:makeId(),team,code,previous,next,delta,at:new Date().toISOString()});
      delta>0?sessionStats.plus++:sessionStats.minus++;
      saveAll("✓ Guardado ahora");
-     vibrate();
-     renderAll();
+     showActionFeedback(button,delta>0?"plus":"minus",delta>0?"+1":"−1");
+     setTimeout(()=>renderAll(),130);
      showToast(`✓ ${team} ${code} · x${next}`);
    });
  }

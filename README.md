@@ -1,13 +1,12 @@
-# World Cup 2026 — Build 615.11
+# World Cup 2026 — Build 615.12
 
-Corrección estructural de Ajustes:
-- Existe un único panel de Ajustes.
-- Se sitúa fuera de Cromos, Estadísticas y Cambiar.
-- Ya no aparece información de Ajustes dentro de otras pestañas.
-- Overlay fijo e independiente con fondo desenfocado.
-- Animación de entrada desde la parte inferior.
-- Scroll interno en iPhone.
-- Cierre con X, pulsación en el fondo o gesto del sistema.
-- Evita aperturas duplicadas y dos cabeceras superpuestas.
+Feedback inmediato en botones:
+- Animación de pulsación.
+- Vibración háptica.
+- Destello verde para `+` y `RECIBIR`.
+- Destello rojo para `−` y `DAR`.
+- Mensaje breve sobre el cromo: `+1`, `−1`, `DAR ✓` o `RECIBIR ✓`.
+- Funciona en vista global y por selección.
+- Mantiene todos los cambios de la Build 615.11.
 
-Caché: `world-cup-2026-build-615-11`.
+Caché: `world-cup-2026-build-615-12`.
