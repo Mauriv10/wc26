@@ -1,4 +1,4 @@
-const APP_VERSION="6.1.5.12";
+const APP_VERSION="6.1.5.13";
 const DATA_REVISION="2026-07-16-master-4";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -280,13 +280,29 @@ function createCard(team,code,qty){
  const minusButton=card.querySelector(".minus");
  const plusButton=card.querySelector(".plus");
  if(minusButton)minusButton.onclick=e=>{
-   showActionFeedback(e.currentTarget,currentView==="exchange"?"give":"minus",currentView==="exchange"?"DAR ✓":"−1");
-   if(currentView==="exchange")stageFromMainList("give",team,code,e.currentTarget);
+   const isExchange=currentView==="exchange";
+   showActionFeedback(e.currentTarget,isExchange?"give":"minus",isExchange?"DAR ✓":"−1");
+   const next=isExchange?getExchangeQty("give",team,code)+1:Math.max(0,(Number(inventory[team][code])||0)-1);
+   showTopFeedback({
+     type:isExchange?"exchange":"negative",
+     title:`${team} ${code} ${isExchange?"preparado para dar":"eliminado"}`,
+     detail:isExchange?`Marcados: x${next}`:`Inventario: x${next}`,
+     key:`${isExchange?"give":"minus"}:${team}:${code}`
+   });
+   if(isExchange)stageFromMainList("give",team,code,e.currentTarget);
    else changeQuantity(team,code,-1,e.currentTarget);
  };
  if(plusButton)plusButton.onclick=e=>{
-   showActionFeedback(e.currentTarget,currentView==="exchange"?"receive":"plus",currentView==="exchange"?"RECIBIR ✓":"+1");
-   if(currentView==="exchange")stageFromMainList("receive",team,code,e.currentTarget);
+   const isExchange=currentView==="exchange";
+   showActionFeedback(e.currentTarget,isExchange?"receive":"plus",isExchange?"RECIBIR ✓":"+1");
+   const next=isExchange?getExchangeQty("receive",team,code)+1:(Number(inventory[team][code])||0)+1;
+   showTopFeedback({
+     type:isExchange?"exchange":"positive",
+     title:`${team} ${code} ${isExchange?"preparado para recibir":"añadido"}`,
+     detail:isExchange?`Marcados: x${next}`:`Inventario: x${next}`,
+     key:`${isExchange?"receive":"plus"}:${team}:${code}`
+   });
+   if(isExchange)stageFromMainList("receive",team,code,e.currentTarget);
    else changeQuantity(team,code,1,e.currentTarget);
  };
  return card;
@@ -374,6 +390,51 @@ function collectionStickerMatches(team,code,qty){
  return true;
 }
 
+
+let topFeedbackTimer=null;
+let topFeedbackState={key:"",count:0,lastAt:0};
+
+function showTopFeedback({type,title,detail,key}){
+ const capsule=$("#topFeedbackCapsule");
+ if(!capsule)return;
+
+ const now=Date.now();
+ if(key&&topFeedbackState.key===key&&now-topFeedbackState.lastAt<850){
+   topFeedbackState.count+=1;
+ }else{
+   topFeedbackState={key:key||"",count:1,lastAt:now};
+ }
+ topFeedbackState.lastAt=now;
+
+ capsule.classList.remove("positive","negative","exchange","show");
+ capsule.classList.add(type);
+ $("#topFeedbackIcon").textContent=type==="positive"?"✓":type==="negative"?"−":"⇄";
+ $("#topFeedbackTitle").textContent=title;
+ $("#topFeedbackDetail").textContent=topFeedbackState.count>1
+   ? `${detail} · ${topFeedbackState.count} acciones`
+   : detail;
+
+ capsule.hidden=false;
+ void capsule.offsetWidth;
+ capsule.classList.add("show");
+
+ clearTimeout(topFeedbackTimer);
+ topFeedbackTimer=setTimeout(()=>{
+   capsule.classList.remove("show");
+   setTimeout(()=>{capsule.hidden=true},220);
+ },1250);
+}
+
+function animateCounter(card,positive){
+ if(!card)return;
+ const counter=card.querySelector(".collection-sticker-qty,.sticker-stock-value");
+ if(!counter)return;
+ counter.classList.remove("counter-pop","positive","negative");
+ void counter.offsetWidth;
+ counter.classList.add("counter-pop",positive?"positive":"negative");
+ setTimeout(()=>counter.classList.remove("counter-pop","positive","negative"),460);
+}
+
 function showActionFeedback(button,type,label){
  if(!button)return;
  button.classList.remove("press-feedback");
@@ -382,6 +443,7 @@ function showActionFeedback(button,type,label){
 
  const card=button.closest(".collection-sticker,.sticker-card");
  if(!card)return;
+ animateCounter(card,type==="plus"||type==="receive");
 
  const positive=type==="plus"||type==="receive";
  card.classList.remove("feedback-plus","feedback-minus");
@@ -430,9 +492,14 @@ function createGlobalSticker(team,code,qty){
      }
      setExchangeQty(type,team,code,current+1);
      showActionFeedback(button,type,type==="give"?"DAR ✓":"RECIBIR ✓");
+     showTopFeedback({
+       type:"exchange",
+       title:`${team} ${code}`,
+       detail:type==="give"?`Preparado para dar · x${current+1}`:`Preparado para recibir · x${current+1}`,
+       key:`${type}:${team}:${code}`
+     });
      saveAll("Intercambio preparado");
      setTimeout(()=>renderAll(),130);
-     showToast(`${team} ${code} · ${type==="give"?"dar":"recibir"} x${current+1}`);
    });
  }else{
    item.querySelectorAll("button[data-delta]").forEach(button=>button.onclick=()=>{
@@ -446,8 +513,13 @@ function createGlobalSticker(team,code,qty){
      delta>0?sessionStats.plus++:sessionStats.minus++;
      saveAll("✓ Guardado ahora");
      showActionFeedback(button,delta>0?"plus":"minus",delta>0?"+1":"−1");
+     showTopFeedback({
+       type:delta>0?"positive":"negative",
+       title:`${team} ${code} ${delta>0?"añadido":"eliminado"}`,
+       detail:`Inventario: x${next}`,
+       key:`${delta>0?"plus":"minus"}:${team}:${code}`
+     });
      setTimeout(()=>renderAll(),130);
-     showToast(`✓ ${team} ${code} · x${next}`);
    });
  }
  return item;
