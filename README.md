@@ -1,9 +1,8 @@
-# World Cup 2026 — Build 615.3
+# World Cup 2026 — Build 615.4
 
 Corrección:
-- El intercambio manual funciona en `Todas las selecciones`.
-- Al pulsar Empezar se activa siempre la pestaña Cromos.
-- Aparecen DAR y RECIBIR en todos los cromos visibles.
-- Aparece siempre la barra Revisar y confirmar / Cancelar.
-- Cambiar entre una selección concreta y Todas mantiene el modo intercambio.
-- Caché: `world-cup-2026-build-615-3`.
+- `🌍 Todas las selecciones` restablece también el filtro global a `Todos`.
+- Se muestran inmediatamente los 49 países/categorías.
+- La barra superior `Todos / Pedir / Entregar` queda sincronizada.
+- Mantiene el intercambio manual si estaba activo.
+- Caché: `world-cup-2026-build-615-4`.

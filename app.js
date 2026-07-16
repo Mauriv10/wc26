@@ -1,4 +1,4 @@
-const APP_VERSION="6.1.5.3";
+const APP_VERSION="6.1.5.4";
 const DATA_REVISION="2026-07-16-master-4";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -197,6 +197,17 @@ function selectTeam(team){
    $("#currentTeamFlag").removeAttribute("src");
    $("#currentTeamFlag").alt="Todas";
    $("#currentTeamFlag").style.display="none";
+
+   collectionFilter="all";
+   currentFilter="all";
+
+   document.querySelectorAll(".collection-filter-button").forEach(button=>{
+     button.classList.toggle("active",button.dataset.collectionFilter==="all");
+   });
+   document.querySelectorAll(".tab").forEach(button=>{
+     button.classList.toggle("active",button.dataset.filter==="all");
+   });
+
    saveAll();
    renderAll();
    return;
