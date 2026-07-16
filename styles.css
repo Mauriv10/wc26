@@ -3699,3 +3699,82 @@ body:not(.main-tab-collection) .collection-tabs-sticky{
     border-radius:16px!important;
   }
 }
+
+
+/* =========================================================
+   BUILD 615.9 — SETTINGS SCROLL FIX FOR IPHONE
+   ========================================================= */
+.settings-center{
+  width:min(94vw,700px);
+  max-width:94vw;
+  height:min(90dvh,900px);
+  max-height:90dvh;
+  margin:auto;
+  padding:0;
+  overflow:hidden!important;
+  display:flex;
+  flex-direction:column;
+  overscroll-behavior:contain;
+}
+
+.settings-sheet-header{
+  flex:0 0 auto;
+  position:sticky;
+  top:0;
+  z-index:5;
+}
+
+.settings-groups{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  touch-action:pan-y;
+  padding-bottom:calc(28px + env(safe-area-inset-bottom));
+}
+
+.settings-center[open]{
+  display:flex;
+}
+
+body:has(.settings-center[open]){
+  overflow:hidden;
+}
+
+@media(max-width:600px){
+  .settings-center{
+    width:100vw;
+    max-width:100vw;
+    height:calc(100dvh - max(8px,env(safe-area-inset-top)));
+    max-height:calc(100dvh - max(8px,env(safe-area-inset-top)));
+    margin:max(8px,env(safe-area-inset-top)) 0 0;
+    border-radius:28px 28px 0 0;
+  }
+
+  .settings-sheet-header{
+    padding-top:18px;
+  }
+
+  .settings-groups{
+    padding:
+      14px
+      10px
+      calc(30px + env(safe-area-inset-bottom));
+  }
+}
+
+@supports not (height:100dvh){
+  .settings-center{
+    height:90vh;
+    max-height:90vh;
+  }
+
+  @media(max-width:600px){
+    .settings-center{
+      height:calc(100vh - 8px);
+      max-height:calc(100vh - 8px);
+    }
+  }
+}

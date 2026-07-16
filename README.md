@@ -1,7 +1,11 @@
-# World Cup 2026 — Build 615.8
+# World Cup 2026 — Build 615.9
 
-- Solo `Todos / Pedir / Entregar` permanece fijo al hacer scroll.
-- `Colección`, `Todos / Me faltan / Repetidos / Brillantes` y `Orden` se desplazan normalmente.
-- La barra fija solo aparece en la pestaña Cromos.
-- Mantiene las correcciones mobile-first del intercambio.
-- Caché: `world-cup-2026-build-615-8`.
+Corrección para Ajustes en iPhone:
+- Scroll interno real dentro del panel.
+- Altura adaptada a la pantalla.
+- Respeta las zonas seguras superior e inferior.
+- Cabecera fija mientras recorres las opciones.
+- Evita que el fondo se mueva cuando Ajustes está abierto.
+- Mantiene todos los cambios de la Build 615.8.
+
+Caché: `world-cup-2026-build-615-9`.
