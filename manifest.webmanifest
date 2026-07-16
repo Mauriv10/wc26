@@ -1,12 +1,12 @@
 {
-  "name": "World Cup 2026 · Build 615.9",
+  "name": "World Cup 2026 · Build 615.10",
   "short_name": "World Cup 2026",
   "description": "Gestor moderno de colecciones de cromos del Mundial 2026",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f5f7",
-  "theme_color": "#f5f5f7",
+  "theme_color": "#e0edfc",
   "orientation": "portrait",
   "icons": [
     {

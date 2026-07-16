@@ -3778,3 +3778,60 @@ body:has(.settings-center[open]){
     }
   }
 }
+
+
+/* =========================================================
+   BUILD 615.10 — IPHONE TOP SAFE AREA FIX
+   ========================================================= */
+html{
+  background:#f5f5f7!important;
+}
+
+body{
+  min-height:100dvh;
+  padding-top:0!important;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(224,237,252,.92) 0,
+      rgba(245,245,247,.96) 190px,
+      #f5f5f7 420px
+    )!important;
+}
+
+body::before{
+  top:0!important;
+  height:max(140px,env(safe-area-inset-top));
+  background:
+    linear-gradient(
+      180deg,
+      rgba(224,237,252,.98),
+      rgba(245,245,247,0)
+    )!important;
+}
+
+.premium-home-header{
+  margin-top:max(8px,env(safe-area-inset-top))!important;
+}
+
+@media(max-width:600px){
+  body{
+    background:
+      linear-gradient(
+        180deg,
+        rgba(224,237,252,.98) 0,
+        rgba(245,245,247,.98) 180px,
+        #f5f5f7 390px
+      )!important;
+  }
+
+  .premium-home-header{
+    margin-top:max(6px,env(safe-area-inset-top))!important;
+  }
+}
+
+@supports not (height:100dvh){
+  body{
+    min-height:100vh;
+  }
+}
