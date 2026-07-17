@@ -8,7 +8,7 @@
   };
   const keyLooksValid = /^(sb_publishable_|eyJ)/.test(config.publishableKey);
   const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.url) && keyLooksValid;
-  const state = { client: null, session: null, localBypass: false, ready: false };
+  const state = { client: null, session: null, signUpMode: false, localBypass: false, ready: false };
 
   function emit(name, detail = {}) {
     window.dispatchEvent(new CustomEvent(name, { detail }));
@@ -20,25 +20,23 @@
     node.classList.toggle("success", success);
   }
   function setBusy(busy) {
-    const node = $("#authGoogleButton");
-    if (node) disabled(node, busy);
+    ["#authSubmitButton", "#authGoogleButton", "#authAppleButton", "#authToggleMode"].forEach(sel => {
+      const node = $(sel); if (node) node.disabled = busy;
+    });
   }
-  function disabled(node, value){ node.disabled=value; }
-  function showAuthStep(step = "welcome") {
-    $("#authWelcomeStep")?.classList.toggle("is-active", step === "welcome");
-    $("#authLoginStep")?.classList.toggle("is-active", step === "login");
+  function updateMode() {
+    $("#authSubmitButton").textContent = state.signUpMode ? "Crear cuenta" : "Iniciar sesión";
+    $("#authToggleMode").textContent = state.signUpMode ? "Ya tengo una cuenta" : "Crear una cuenta";
+    $("#authPassword").autocomplete = state.signUpMode ? "new-password" : "current-password";
     setMessage();
   }
-  function openGate({ login = false } = {}) {
+  function openGate() {
     const gate = $("#authGate"); if (!gate) return;
-    gate.hidden = false;
-    document.body.classList.add("auth-locked");
-    showAuthStep(login ? "login" : "welcome");
+    gate.hidden = false; document.body.classList.add("auth-locked");
   }
   function closeGate() {
     const gate = $("#authGate"); if (!gate) return;
-    gate.hidden = true;
-    document.body.classList.remove("auth-locked");
+    gate.hidden = true; document.body.classList.remove("auth-locked");
   }
   function updateAccountUI() {
     const email = state.session?.user?.email || "";
@@ -56,14 +54,31 @@
       action.textContent = "Iniciar sesión";
     }
   }
-  async function oauth() {
+  async function oauth(provider) {
     if (!state.client) return;
     setBusy(true); setMessage();
     const { error } = await state.client.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: window.location.href.split("#")[0].split("?")[0] }
     });
     if (error) { setMessage(error.message); setBusy(false); }
+  }
+  async function submit(event) {
+    event.preventDefault();
+    if (!state.client) return;
+    const email = $("#authEmail").value.trim();
+    const password = $("#authPassword").value;
+    if (!email || password.length < 6) { setMessage("Introduce un correo válido y una contraseña de al menos 6 caracteres."); return; }
+    setBusy(true); setMessage();
+    const result = state.signUpMode
+      ? await state.client.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href.split("#")[0].split("?")[0] } })
+      : await state.client.auth.signInWithPassword({ email, password });
+    setBusy(false);
+    if (result.error) { setMessage(result.error.message); return; }
+    if (state.signUpMode && !result.data.session) {
+      setMessage("Cuenta creada. Revisa tu correo para confirmarla.", true);
+      return;
+    }
   }
   async function signOut() {
     if (state.client && state.session) await state.client.auth.signOut();
@@ -74,11 +89,10 @@
     const configuredPanel = $("#authConfiguredPanel");
     const setupPanel = $("#authSetupPanel");
     if (!configured || !window.supabase?.createClient) {
-      if(configuredPanel) configuredPanel.hidden = true;
-      if(setupPanel) setupPanel.hidden = false;
-      const setupText = setupPanel?.querySelector("p");
-      if (setupText) setupText.innerHTML = 'Revisa <code>supabase-config.js</code>: la URL y la Publishable key deben ser válidas.';
-      openGate({login:true});
+      configuredPanel.hidden = true; setupPanel.hidden = false;
+      const setupText = setupPanel.querySelector("p");
+      if (setupText) setupText.innerHTML = 'Revisa <code>supabase-config.js</code>: la URL debe ser la de tu proyecto y la Publishable key debe empezar por <code>sb_publishable_</code> y estar entre comillas.';
+      openGate();
       state.ready = true; updateAccountUI(); emit("wc-auth-ready", { session: null, configured: false }); return;
     }
     setupPanel.hidden = true; configuredPanel.hidden = false;
@@ -98,12 +112,13 @@
     updateAccountUI(); emit("wc-auth-ready", { session: state.session, configured: true });
   }
   document.addEventListener("DOMContentLoaded", () => {
-    $("#authWelcomeContinue")?.addEventListener("click", () => showAuthStep("login"));
-    $("#authBackToWelcome")?.addEventListener("click", () => showAuthStep("welcome"));
-    $("#authGoogleButton")?.addEventListener("click", oauth);
+    $("#authForm")?.addEventListener("submit", submit);
+    $("#authToggleMode")?.addEventListener("click", () => { state.signUpMode = !state.signUpMode; updateMode(); });
+    $("#authGoogleButton")?.addEventListener("click", () => oauth("google"));
+    $("#authAppleButton")?.addEventListener("click", () => oauth("apple"));
     $("#authLocalButton")?.addEventListener("click", () => { state.localBypass = true; closeGate(); updateAccountUI(); emit("wc-auth-local-bypass"); });
-    $("#accountActionButton")?.addEventListener("click", () => state.session ? signOut() : openGate({login:true}));
-    init().catch(error => { console.error(error); setMessage("No se pudo iniciar el sistema de cuentas."); openGate({login:true}); });
+    $("#accountActionButton")?.addEventListener("click", () => state.session ? signOut() : openGate());
+    updateMode(); init().catch(error => { console.error(error); setMessage("No se pudo iniciar el sistema de cuentas."); openGate(); });
   });
-  window.WCAuth = { get client(){ return state.client; }, get session(){ return state.session; }, get configured(){ return configured; }, open: () => openGate({login:true}), signOut };
+  window.WCAuth = { get client(){ return state.client; }, get session(){ return state.session; }, get configured(){ return configured; }, open: openGate, signOut };
 })();

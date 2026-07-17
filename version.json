@@ -1,8 +1,8 @@
 {
-  "version": "702.1",
-  "appVersion": "7.0.2.1",
-  "releasedAt": "2026-07-17T22:30:00+02:00",
-  "name": "Bienvenida guiada",
-  "build": "702.1",
-  "label": "Bienvenida guiada"
+  "version": "702.0.0",
+  "appVersion": "7.0.0.9",
+  "releasedAt": "2026-07-17T21:35:00+02:00",
+  "name": "Base para onboarding",
+  "build": "702.0.0",
+  "label": "Build 702"
 }

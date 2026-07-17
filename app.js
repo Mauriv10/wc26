@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"702.1";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"701.3.2";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -26,7 +26,6 @@ const CLOUD_STATE_TABLE="wc_user_state";
 const CLOUD_LOCAL_META_KEY="world-cup-2026-cloud-meta-v7007";
 let cloudSession=null,cloudSubscription=null,cloudSaveTimer=null,cloudApplying=false,cloudReady=false,cloudRevision=0,cloudLastUpdatedAt=null;
 let pendingBackupRestore=null;
-let appDataReady=false,onboardingPendingSession=null;
 
 const $=s=>document.querySelector(s);
 const teamSelect=$("#teamSelect"),teamSearch=$("#teamSearch"),suggestions=$("#searchSuggestions");
@@ -157,27 +156,14 @@ async function applyCloudPayload(row,{silent=false}={}){
    setCloudStatus("✓ Sincronizado","synced");return true;
  }finally{cloudApplying=false}
 }
-function showWelcomeBack(session){
- const firstName=session?.user?.user_metadata?.full_name?.split(" ")[0]
-   || session?.user?.user_metadata?.name?.split(" ")[0]
-   || "";
- const message=firstName?`Bienvenido de nuevo, ${firstName} 👋`:"Bienvenido de nuevo 👋";
- setTimeout(()=>showToast(message),250);
-}
 async function initialCloudSync(session){
  const client=cloudClient();if(!client||!session)return;
  cloudSession=session;setCloudStatus("Conectando con la nube…","syncing");
  const {data,error}=await client.from(CLOUD_STATE_TABLE).select("payload,revision,updated_at").eq("user_id",session.user.id).maybeSingle();
  if(error){setCloudStatus("Falta preparar la base de datos","error");console.error(error);return}
  cloudReady=true;
- if(data){
-   await applyCloudPayload(data,{silent:true});
-   startRealtime();
-   showWelcomeBack(session);
- }else{
-   onboardingPendingSession=session;
-   openOnboardingWhenReady();
- }
+ if(data){await applyCloudPayload(data,{silent:true})}else{await saveCloudState()}
+ startRealtime();
 }
 function startRealtime(){
  const client=cloudClient();if(!client||!cloudSession)return;
@@ -271,9 +257,7 @@ async function loadData(){
  setupSettingsCenter();
  document.body.classList.add("main-tab-collection");
  updateConnectionStatus();
- appDataReady=true;
  hideLoading();
- openOnboardingWhenReady();
 }
 function readJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
 function normalize(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
@@ -2032,63 +2016,6 @@ function watchInstallingWorker(worker){
  });
 }
 
-async 
-function setOnboardingStep(step){
- const ids=["onboardingForm","onboardingReadyStep"];
- ids.forEach((id,index)=>$("#"+id)?.classList.toggle("is-active",index===step));
- document.querySelectorAll(".onboarding-progress span").forEach((dot,index)=>dot.classList.toggle("is-active",index<=step));
- if(step===0)setTimeout(()=>$("#onboardingName")?.focus(),120);
-}
-function openOnboardingWhenReady(){
- if(!onboardingPendingSession||!appDataReady)return;
- const dialog=$("#onboardingDialog");
- if(!dialog||dialog.open)return;
- const suggested=onboardingPendingSession.user?.user_metadata?.full_name?.split(" ")[0]
-   || onboardingPendingSession.user?.user_metadata?.name?.split(" ")[0]
-   || "";
- const input=$("#onboardingName");
- if(input&&!input.value)input.value=suggested?`Colección de ${suggested}`:"Mi Mundial 2026";
- const nameNode=$("#onboardingUserName");if(nameNode)nameNode.textContent=suggested||"coleccionista";
- setOnboardingStep(0);
- dialog.showModal();
- document.body.classList.add("onboarding-open");
-}
-function adjustOnboardingTarget(delta){
- const input=$("#onboardingTarget");if(!input)return;
- input.value=String(Math.min(20,Math.max(1,(Number(input.value)||1)+delta)));
- $("#onboardingTargetValue").textContent=input.value;
-}
-async function completeOnboarding(event){
- event?.preventDefault();
- if(!onboardingPendingSession)return;
- const button=$("#onboardingStartButton");
- const name=($("#onboardingName")?.value||"").trim()||"Mi Mundial 2026";
- const target=Math.min(20,Math.max(1,Number($("#onboardingTarget")?.value)||1));
- if(button){button.disabled=true;button.textContent="Preparando…"}
- const base=structuredClone(masterInventories["world-cup-2026-main"]||originalInventory);
- const blank=Object.fromEntries(Object.entries(base).map(([team,stickers])=>[team,Object.fromEntries(Object.keys(stickers).map(code=>[code,0]))]));
- const project=defaultProject(name,target,blank,"world-cup-2026-main");
- projects={[project.id]:project};activeProjectId=project.id;
- persistProjects();loadProjectState();renderProjectsList();renderAll();
- try{
-   await saveCloudState();startRealtime();
- }catch(error){console.error(error)}
- finally{
-   if(button){button.disabled=false;button.textContent="Preparar mi colección"}
- }
- $("#onboardingReadyName").textContent=name;
- $("#onboardingReadyTarget").textContent=`${target} ${target===1?"álbum":"álbumes"}`;
- setOnboardingStep(1);
-}
-function finishOnboarding(){
- const dialog=$("#onboardingDialog");if(dialog?.open)dialog.close();
- document.body.classList.remove("onboarding-open");
- onboardingPendingSession=null;
- localStorage.setItem("wc26-onboarding-7021-complete","1");
- showToast("Todo listo · añade tu primer cromo");
- setTimeout(()=>$("#teamSelectorButton")?.focus(),150);
-}
-
 async function installAvailableUpdate(){
  const button=document.getElementById("appUpdateButton");
  if(button){button.disabled=true;button.textContent="Actualizando…";}
@@ -2160,10 +2087,6 @@ loadData().catch(error=>{console.error(error);hideLoading();document.body.innerH
 
 /* Build 701.3.2 · Update-loop fix and repository cleanup */
 document.addEventListener("DOMContentLoaded",()=>{
- $("#onboardingEnterButton")?.addEventListener("click",finishOnboarding);
- $("#onboardingForm")?.addEventListener("submit",completeOnboarding);
- $("#onboardingTargetMinus")?.addEventListener("click",()=>adjustOnboardingTarget(-1));
- $("#onboardingTargetPlus")?.addEventListener("click",()=>adjustOnboardingTarget(1));
  const form=$("#editCollectionForm");
  if(form)form.addEventListener("submit",event=>{event.preventDefault();saveEditedCollection()});
  $("#closeEditCollectionDialog")?.addEventListener("click",closeEditCollection);

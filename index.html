@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="World Cup 2026">
-  <title>World Cup 2026 · Build 702.1</title>
+  <title>World Cup 2026 · Build 701.3.2</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="canonical" href="https://mauriv10.github.io/wc26/">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/world-cup-2026-apple-v522.png">
@@ -16,79 +16,30 @@
 <body>
 
 <div id="authGate" class="auth-gate" hidden>
-  <section class="auth-card auth-card-guided" aria-labelledby="authTitle">
-    <div id="authWelcomeStep" class="auth-step is-active">
-      <div class="auth-brand-mark auth-brand-mark-large" aria-hidden="true"><span>10</span></div>
-      <span class="auth-kicker">WORLD CUP 2026</span>
-      <h1 id="authTitle">Bienvenido a WC26</h1>
-      <p>Gestiona tu colección del Mundial, prepara intercambios y ten tus datos disponibles en todos tus dispositivos.</p>
-      <div class="auth-welcome-features">
-        <span><b>✓</b> Inventario siempre ordenado</span>
-        <span><b>✓</b> Listas para pedir y entregar</span>
-        <span><b>✓</b> Sincronización automática</span>
-      </div>
-      <button id="authWelcomeContinue" class="auth-primary" type="button">Continuar</button>
-    </div>
+  <section class="auth-card" aria-labelledby="authTitle">
+    <div class="auth-brand-mark" aria-hidden="true"><span>10</span></div>
+    <span class="auth-kicker">WORLD CUP 2026</span>
+    <h1 id="authTitle">Tu colección, en todos tus dispositivos</h1>
+    <p id="authSubtitle">Inicia sesión para sincronizar tu colección entre iPhone, iPad y ordenador.</p>
 
-    <div id="authLoginStep" class="auth-step">
-      <button id="authBackToWelcome" class="auth-back" type="button" aria-label="Volver">‹</button>
-      <div class="auth-brand-mark" aria-hidden="true"><span>10</span></div>
-      <span class="auth-kicker">TU CUENTA</span>
-      <h1>Inicia sesión</h1>
-      <p id="authSubtitle">Usamos Google para guardar tu colección en la nube y recuperarla automáticamente en cualquier dispositivo.</p>
-
-      <div id="authConfiguredPanel">
-        <button id="authGoogleButton" class="auth-provider auth-google-only" type="button"><span>G</span>Continuar con Google</button>
-        <p class="auth-privacy-note">WC26 solo utiliza tu cuenta para identificarte y sincronizar tus colecciones.</p>
-        <p id="authMessage" class="auth-message" aria-live="polite"></p>
-      </div>
+    <div id="authConfiguredPanel">
+      <button id="authGoogleButton" class="auth-provider" type="button"><span>G</span>Continuar con Google</button>
+      <button id="authAppleButton" class="auth-provider auth-provider-dark" type="button"><span>●</span>Continuar con Apple</button>
+      <div class="auth-divider"><span>o</span></div>
+      <form id="authForm" novalidate>
+        <label><span>Correo electrónico</span><input id="authEmail" type="email" inputmode="email" autocomplete="email" required placeholder="tu@email.com"></label>
+        <label><span>Contraseña</span><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>
+        <button id="authSubmitButton" class="auth-primary" type="submit">Iniciar sesión</button>
+      </form>
+      <button id="authToggleMode" class="auth-link" type="button">Crear una cuenta</button>
+      <p id="authMessage" class="auth-message" aria-live="polite"></p>
     </div>
 
     <div id="authSetupPanel" class="auth-setup" hidden>
       <strong>Falta conectar Supabase</strong>
-      <p>Revisa la configuración de Supabase antes de iniciar sesión.</p>
+      <p>La pantalla de cuentas ya está instalada. Añade la URL y la clave pública en <code>supabase-config.js</code>.</p>
       <button id="authLocalButton" class="auth-primary" type="button">Entrar temporalmente en modo local</button>
       <small>El inventario actual del iPhone no se elimina ni se modifica.</small>
-    </div>
-  </section>
-</div>
-
-<div id="onboardingDialog" class="onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
-  <section class="onboarding-card onboarding-card-steps onboarding-card-two-steps">
-    <div class="onboarding-progress" aria-hidden="true">
-      <span class="is-active"></span><span></span>
-    </div>
-
-    <form id="onboardingForm" class="onboarding-step is-active" novalidate>
-      <div class="onboarding-step-heading">
-        <span class="onboarding-kicker">PRIMERA COLECCIÓN</span>
-        <h2 id="onboardingTitle">Hola, <span id="onboardingUserName">coleccionista</span> 👋</h2>
-        <p>Vamos a preparar tu primera colección. Podrás modificar estos datos más adelante.</p>
-      </div>
-      <label class="onboarding-field"><span>Nombre de la colección</span><input id="onboardingName" type="text" maxlength="60" required placeholder="Mi Mundial 2026"></label>
-      <div class="onboarding-field">
-        <span>Álbumes que quieres completar</span>
-        <div class="onboarding-stepper">
-          <button id="onboardingTargetMinus" type="button" aria-label="Reducir objetivo">−</button>
-          <strong id="onboardingTargetValue">5</strong>
-          <button id="onboardingTargetPlus" type="button" aria-label="Aumentar objetivo">+</button>
-        </div>
-        <input id="onboardingTarget" type="number" min="1" max="20" value="5" hidden>
-      </div>
-      <button id="onboardingStartButton" class="onboarding-primary" type="submit">Crear mi colección</button>
-    </form>
-
-    <div id="onboardingReadyStep" class="onboarding-step onboarding-ready-step">
-      <div class="onboarding-success" aria-hidden="true">✓</div>
-      <span class="onboarding-kicker">TODO LISTO</span>
-      <h2>Tu colección está preparada</h2>
-      <p>Ya puedes empezar a registrar tus cromos. Todos los cambios se guardarán automáticamente.</p>
-      <div class="onboarding-ready-summary">
-        <span>📔 <strong id="onboardingReadyName">Mi Mundial 2026</strong></span>
-        <span>🎯 Objetivo: <strong id="onboardingReadyTarget">5 álbumes</strong></span>
-        <span>☁ Sincronización automática activada</span>
-      </div>
-      <button id="onboardingEnterButton" class="onboarding-primary" type="button">Empezar</button>
     </div>
   </section>
 </div>
