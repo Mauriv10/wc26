@@ -4462,3 +4462,24 @@ body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
 @media(min-width:601px){
   .bottom-app-nav{left:50%!important;right:auto!important;width:min(calc(100% - 20px),620px)!important;transform:translateX(-50%)!important}
 }
+
+
+/* =========================================================
+   BUILD 703.4.5 — LOCKED BOTTOM NAV DURING NATIVE SHARE
+   ========================================================= */
+.bottom-app-nav.native-share-position-lock{
+  position:fixed!important;
+  left:var(--wc-share-nav-left)!important;
+  right:var(--wc-share-nav-right)!important;
+  bottom:var(--wc-share-nav-bottom)!important;
+  top:auto!important;
+  width:var(--wc-share-nav-width)!important;
+  max-width:none!important;
+  transform:var(--wc-share-nav-transform)!important;
+  margin:0!important;
+  transition:none!important;
+  animation:none!important;
+}
+body.native-share-active .bottom-app-nav{
+  transition:none!important;
+}
