@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"703.4.3";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"703.4.4";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -251,7 +251,7 @@ window.addEventListener("pageshow",recoverFromForeground);
 window.addEventListener("focus",recoverFromForeground);
 
 
-// Build 703.4.3: native-share recovery without locking the nav to VisualViewport.
+// Build 703.4.4: native-share recovery without locking the nav to VisualViewport.
 // The previous top-coordinate strategy could move the bar while scrolling because
 // visualViewport.offsetTop changes during browser UI animations.
 function resetBottomNavigationAfterNativeUI(){
@@ -272,7 +272,7 @@ function scheduleBottomNavigationReset(){
  [50,180,420,850,1400].forEach(delay=>setTimeout(resetBottomNavigationAfterNativeUI,delay));
 }
 
-// Build 703.4.3: recover only after a real background/foreground cycle.
+// Build 703.4.4: recover only after a real background/foreground cycle.
 // The previous build could reload too early because navigator.share() may resolve
 // before WhatsApp actually takes the foreground. We now arm recovery before
 // sharing, remember that WC26 genuinely became hidden, and reload only when it
@@ -2418,7 +2418,7 @@ initialiseAppUpdates();
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});
 
 
-/* Build 703.4.3 · actualización verificable + recuperación tras compartir */
+/* Build 703.4.4 · actualización verificable + recuperación tras compartir */
 document.addEventListener("DOMContentLoaded",()=>{
  $("#onboardingForm")?.addEventListener("submit",createFirstCloudCollection);
  $("#onboardingStartButton")?.addEventListener("click",()=>{closeFirstCollectionOnboarding();switchMainView?.("collection");window.scrollTo({top:0,behavior:"auto"});showToast("Colección creada y sincronizada ✓")});

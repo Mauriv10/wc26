@@ -1,8 +1,8 @@
 {
-  "version": "703.4.3",
+  "version": "703.4.4",
   "appVersion": "7.0.3.4.3",
   "releasedAt": "2026-07-18T00:45:00+02:00",
   "name": "Recuperación tras retorno real desde compartir",
-  "build": "703.4.3",
-  "label": "Build 703.4.3"
+  "build": "703.4.4",
+  "label": "Corrección de estructura DOM y barra inferior"
 }
