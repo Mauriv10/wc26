@@ -1,8 +1,8 @@
 {
-  "version": "702.0.0",
-  "appVersion": "7.0.0.9",
-  "releasedAt": "2026-07-17T21:35:00+02:00",
-  "name": "Base para onboarding",
-  "build": "702.0.0",
-  "label": "Build 702"
+  "version": "702.2",
+  "appVersion": "7.0.2.2",
+  "releasedAt": "2026-07-17T22:15:00+02:00",
+  "name": "Onboarding completo",
+  "build": "702.2",
+  "label": "Build 702.2"
 }

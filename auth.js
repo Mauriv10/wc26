@@ -1,124 +1,92 @@
 (() => {
   "use strict";
-  const $ = (selector) => document.querySelector(selector);
+  const $ = selector => document.querySelector(selector);
   const rawConfig = window.WC_SUPABASE_CONFIG || window.SUPABASE_CONFIG || {};
   const config = {
     url: String(rawConfig.url || rawConfig.supabaseUrl || "").trim(),
     publishableKey: String(rawConfig.publishableKey || rawConfig.anonKey || rawConfig.key || "").trim()
   };
-  const keyLooksValid = /^(sb_publishable_|eyJ)/.test(config.publishableKey);
-  const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.url) && keyLooksValid;
-  const state = { client: null, session: null, signUpMode: false, localBypass: false, ready: false };
+  const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.url) && /^(sb_publishable_|eyJ)/.test(config.publishableKey);
+  const state = { client: null, session: null, localBypass: false, ready: false };
 
-  function emit(name, detail = {}) {
-    window.dispatchEvent(new CustomEvent(name, { detail }));
-  }
-  function setMessage(text = "", success = false) {
-    const node = $("#authMessage");
-    if (!node) return;
-    node.textContent = text;
-    node.classList.toggle("success", success);
-  }
-  function setBusy(busy) {
-    ["#authSubmitButton", "#authGoogleButton", "#authAppleButton", "#authToggleMode"].forEach(sel => {
-      const node = $(sel); if (node) node.disabled = busy;
-    });
-  }
-  function updateMode() {
-    $("#authSubmitButton").textContent = state.signUpMode ? "Crear cuenta" : "Iniciar sesión";
-    $("#authToggleMode").textContent = state.signUpMode ? "Ya tengo una cuenta" : "Crear una cuenta";
-    $("#authPassword").autocomplete = state.signUpMode ? "new-password" : "current-password";
+  function emit(name, detail = {}) { window.dispatchEvent(new CustomEvent(name, { detail })); }
+  function setMessage(text = "") { const n = $("#authMessage"); if (n) n.textContent = text; }
+  function setBusy(busy) { const n = $("#authGoogleButton"); if (n) n.disabled = busy; }
+  function showStep(name) {
+    const welcome = $("#authWelcomeStep"), login = $("#authLoginStep");
+    if (welcome) welcome.hidden = name !== "welcome";
+    if (login) login.hidden = name !== "login";
     setMessage();
   }
-  function openGate() {
+  function showSplash(message = "Sincronizando…") {
+    const splash = $("#appSplash"); if (!splash) return;
+    const label = $("#splashMessage"); if (label) label.textContent = message;
+    splash.hidden = false;
+  }
+  function hideSplash() { const splash = $("#appSplash"); if (splash) splash.hidden = true; }
+  function openGate(step = "welcome") {
     const gate = $("#authGate"); if (!gate) return;
-    gate.hidden = false; document.body.classList.add("auth-locked");
+    gate.hidden = false; document.body.classList.add("auth-locked"); showStep(step); hideSplash();
   }
   function closeGate() {
     const gate = $("#authGate"); if (!gate) return;
     gate.hidden = true; document.body.classList.remove("auth-locked");
   }
+  function userLabel(user) {
+    return user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "Cuenta conectada";
+  }
   function updateAccountUI() {
-    const email = state.session?.user?.email || "";
-    const status = $("#accountStatusLabel");
-    const label = $("#accountEmailLabel");
-    const action = $("#accountActionButton");
+    const status = $("#accountStatusLabel"), label = $("#accountEmailLabel"), action = $("#accountActionButton");
     if (!status || !label || !action) return;
-    if (state.session) {
-      status.textContent = "Sesión iniciada";
-      label.textContent = email || "Cuenta conectada";
-      action.textContent = "Cerrar sesión";
-    } else {
-      status.textContent = configured ? "Sin sesión" : "Modo local";
-      label.textContent = configured ? "Inicia sesión para sincronizar" : "Supabase pendiente de configurar";
-      action.textContent = "Iniciar sesión";
-    }
+    if (state.session) { status.textContent = "Sincronizado"; label.textContent = userLabel(state.session.user); action.textContent = "Cerrar sesión"; }
+    else { status.textContent = configured ? "Sin sesión" : "Modo local"; label.textContent = configured ? "Inicia sesión para sincronizar" : "Supabase pendiente"; action.textContent = "Iniciar sesión"; }
   }
-  async function oauth(provider) {
+  async function oauth() {
     if (!state.client) return;
-    setBusy(true); setMessage();
-    const { error } = await state.client.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.href.split("#")[0].split("?")[0] }
-    });
-    if (error) { setMessage(error.message); setBusy(false); }
-  }
-  async function submit(event) {
-    event.preventDefault();
-    if (!state.client) return;
-    const email = $("#authEmail").value.trim();
-    const password = $("#authPassword").value;
-    if (!email || password.length < 6) { setMessage("Introduce un correo válido y una contraseña de al menos 6 caracteres."); return; }
-    setBusy(true); setMessage();
-    const result = state.signUpMode
-      ? await state.client.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href.split("#")[0].split("?")[0] } })
-      : await state.client.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (result.error) { setMessage(result.error.message); return; }
-    if (state.signUpMode && !result.data.session) {
-      setMessage("Cuenta creada. Revisa tu correo para confirmarla.", true);
-      return;
-    }
+    setBusy(true); setMessage(); showSplash("Abriendo Google…"); closeGate();
+    const redirectTo = window.location.href.split("#")[0].split("?")[0];
+    const { error } = await state.client.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error) { hideSplash(); openGate("login"); setMessage(error.message); setBusy(false); }
   }
   async function signOut() {
+    showSplash("Cerrando sesión…");
     if (state.client && state.session) await state.client.auth.signOut();
-    state.localBypass = false;
-    openGate(); updateAccountUI();
+    state.localBypass = false; hideSplash(); openGate("welcome"); updateAccountUI();
   }
   async function init() {
-    const configuredPanel = $("#authConfiguredPanel");
-    const setupPanel = $("#authSetupPanel");
+    showSplash("Comprobando tu cuenta…");
+    const configuredPanel = $("#authConfiguredPanel"), setupPanel = $("#authSetupPanel");
     if (!configured || !window.supabase?.createClient) {
-      configuredPanel.hidden = true; setupPanel.hidden = false;
-      const setupText = setupPanel.querySelector("p");
-      if (setupText) setupText.innerHTML = 'Revisa <code>supabase-config.js</code>: la URL debe ser la de tu proyecto y la Publishable key debe empezar por <code>sb_publishable_</code> y estar entre comillas.';
-      openGate();
-      state.ready = true; updateAccountUI(); emit("wc-auth-ready", { session: null, configured: false }); return;
+      if (configuredPanel) configuredPanel.hidden = true;
+      if (setupPanel) setupPanel.hidden = false;
+      state.ready = true; updateAccountUI(); openGate("login"); emit("wc-auth-ready", { session: null, configured: false }); return;
     }
-    setupPanel.hidden = true; configuredPanel.hidden = false;
-    state.client = window.supabase.createClient(config.url, config.publishableKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-    });
+    if (setupPanel) setupPanel.hidden = true;
+    if (configuredPanel) configuredPanel.hidden = false;
+    state.client = window.supabase.createClient(config.url, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
     window.wcSupabase = state.client;
     const { data } = await state.client.auth.getSession();
     state.session = data.session;
     state.client.auth.onAuthStateChange((event, session) => {
+      const previous = state.session;
       state.session = session;
-      if (session) closeGate(); else if (event === "SIGNED_OUT") openGate();
-      updateAccountUI(); emit("wc-auth-changed", { event, session });
+      updateAccountUI();
+      if (session) { closeGate(); showSplash("Cargando tus colecciones…"); }
+      else if (event === "SIGNED_OUT") openGate("welcome");
+      emit("wc-auth-changed", { event, session, previousSession: previous });
     });
-    state.ready = true;
-    if (state.session) closeGate(); else openGate();
-    updateAccountUI(); emit("wc-auth-ready", { session: state.session, configured: true });
+    state.ready = true; updateAccountUI();
+    if (state.session) { closeGate(); showSplash("Cargando tus colecciones…"); }
+    else openGate("welcome");
+    emit("wc-auth-ready", { session: state.session, configured: true });
   }
   document.addEventListener("DOMContentLoaded", () => {
-    $("#authForm")?.addEventListener("submit", submit);
-    $("#authToggleMode")?.addEventListener("click", () => { state.signUpMode = !state.signUpMode; updateMode(); });
-    $("#authGoogleButton")?.addEventListener("click", () => oauth("google"));
-    $("#authAppleButton")?.addEventListener("click", () => oauth("apple"));
-    $("#authLocalButton")?.addEventListener("click", () => { state.localBypass = true; closeGate(); updateAccountUI(); emit("wc-auth-local-bypass"); });
-    $("#accountActionButton")?.addEventListener("click", () => state.session ? signOut() : openGate());
-    updateMode(); init().catch(error => { console.error(error); setMessage("No se pudo iniciar el sistema de cuentas."); openGate(); });
+    $("#authContinueButton")?.addEventListener("click", () => showStep("login"));
+    $("#authBackButton")?.addEventListener("click", () => showStep("welcome"));
+    $("#authGoogleButton")?.addEventListener("click", oauth);
+    $("#authLocalButton")?.addEventListener("click", () => { state.localBypass = true; closeGate(); hideSplash(); updateAccountUI(); emit("wc-auth-local-bypass"); });
+    $("#accountActionButton")?.addEventListener("click", () => state.session ? signOut() : openGate("welcome"));
+    init().catch(error => { console.error(error); openGate("login"); setMessage("No se pudo iniciar el sistema de cuentas."); });
   });
-  window.WCAuth = { get client(){ return state.client; }, get session(){ return state.session; }, get configured(){ return configured; }, open: openGate, signOut };
+  window.WCAuth = { get client(){ return state.client; }, get session(){ return state.session; }, get configured(){ return configured; }, open: openGate, signOut, showSplash, hideSplash };
 })();

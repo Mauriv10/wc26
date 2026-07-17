@@ -1,3 +1,21 @@
+# Build 702.2
+
+- Splash de arranque mientras se comprueba sesión y nube.
+- Bienvenida seguida de acceso exclusivo con Google.
+- Usuarios existentes entran directamente a su colección de Supabase.
+- Usuarios sin estado en Supabase crean su primera colección mediante onboarding.
+- Objetivo inicial seleccionable y valor 5 preseleccionado.
+- Pantalla final «Todo listo».
+- Perfil de Ajustes actualizado automáticamente con el nombre de Google.
+- Nueva caché `wc26-build-702-2`.
+
+# Build 702.1
+
+- Planned onboarding flow (design)
+- Google login flow placeholder
+- Version bump
+
+
 # 702.0.0
 - Base para siguiente evolución.
 

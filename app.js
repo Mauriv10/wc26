@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"701.3.2";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"702.2";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -26,6 +26,8 @@ const CLOUD_STATE_TABLE="wc_user_state";
 const CLOUD_LOCAL_META_KEY="world-cup-2026-cloud-meta-v7007";
 let cloudSession=null,cloudSubscription=null,cloudSaveTimer=null,cloudApplying=false,cloudReady=false,cloudRevision=0,cloudLastUpdatedAt=null;
 let pendingBackupRestore=null;
+let appDataReady=false,appDataReadyResolve;
+const appDataReadyPromise=new Promise(resolve=>{appDataReadyResolve=resolve});
 
 const $=s=>document.querySelector(s);
 const teamSelect=$("#teamSelect"),teamSearch=$("#teamSearch"),suggestions=$("#searchSuggestions");
@@ -156,14 +158,62 @@ async function applyCloudPayload(row,{silent=false}={}){
    setCloudStatus("✓ Sincronizado","synced");return true;
  }finally{cloudApplying=false}
 }
+function displayUserName(user){
+ const raw=user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split("@")[0]||"";
+ return String(raw).trim().split(/\s+/)[0]||"coleccionista";
+}
+function hideAppSplash(){window.WCAuth?.hideSplash?.();const splash=$("#appSplash");if(splash)splash.hidden=true}
+function showReturningWelcome(session){
+ hideAppSplash();
+ const name=displayUserName(session?.user);
+ showToast(`👋 Bienvenido de nuevo, ${name}`);
+}
+function openFirstCollectionOnboarding(session){
+ hideAppSplash();
+ const gate=$("#onboardingGate");if(!gate)return;
+ $("#onboardingUserName").textContent=displayUserName(session?.user);
+ $("#onboardingCreateStep").hidden=false;$("#onboardingReadyStep").hidden=true;
+ $("#onboardingMessage").textContent="";
+ gate.hidden=false;document.body.classList.add("onboarding-locked");
+}
+function closeFirstCollectionOnboarding(){
+ const gate=$("#onboardingGate");if(gate)gate.hidden=true;
+ document.body.classList.remove("onboarding-locked");
+}
+async function createFirstCloudCollection(event){
+ event?.preventDefault();
+ const name=$("#onboardingCollectionName")?.value.trim();
+ const target=Math.max(1,Number(document.querySelector('input[name="onboardingTarget"]:checked')?.value)||5);
+ const message=$("#onboardingMessage"),button=$("#onboardingCreateButton");
+ if(!name){if(message)message.textContent="Escribe un nombre para la colección.";return}
+ if(button){button.disabled=true;button.textContent="Creando colección…"}
+ if(message)message.textContent="Sincronizando con la nube…";
+ try{
+   const seedType=Object.keys(masterInventories)[0]||"world-cup-2026-main";
+   const base=structuredClone(masterInventories[seedType]||originalInventory);
+   const blank=Object.fromEntries(Object.entries(base).map(([team,stickers])=>[team,Object.fromEntries(Object.keys(stickers).map(code=>[code,0]))]));
+   const first=defaultProject(name,target,blank,seedType);
+   projects={[first.id]:first};activeProjectId=first.id;
+   localStorage.setItem(PROJECTS_KEY,JSON.stringify(projects));localStorage.setItem(ACTIVE_PROJECT_KEY,activeProjectId);
+   loadProjectState();renderProjectsList();
+   cloudReady=true;await saveCloudState();startRealtime();
+   $("#onboardingCreateStep").hidden=true;$("#onboardingReadyStep").hidden=false;
+ }catch(error){
+   console.error(error);if(message)message.textContent="No se pudo crear la colección. Comprueba la conexión e inténtalo de nuevo.";
+ }finally{if(button){button.disabled=false;button.textContent="Crear colección"}}
+}
 async function initialCloudSync(session){
  const client=cloudClient();if(!client||!session)return;
+ await appDataReadyPromise;
  cloudSession=session;setCloudStatus("Conectando con la nube…","syncing");
  const {data,error}=await client.from(CLOUD_STATE_TABLE).select("payload,revision,updated_at").eq("user_id",session.user.id).maybeSingle();
- if(error){setCloudStatus("Falta preparar la base de datos","error");console.error(error);return}
+ if(error){setCloudStatus("Falta preparar la base de datos","error");console.error(error);hideAppSplash();return}
  cloudReady=true;
- if(data){await applyCloudPayload(data,{silent:true})}else{await saveCloudState()}
- startRealtime();
+ if(data?.payload?.projects&&Object.keys(data.payload.projects).length){
+   await applyCloudPayload(data,{silent:true});startRealtime();showReturningWelcome(session);
+ }else{
+   cloudReady=false;openFirstCollectionOnboarding(session);
+ }
 }
 function startRealtime(){
  const client=cloudClient();if(!client||!cloudSession)return;
@@ -257,6 +307,7 @@ async function loadData(){
  setupSettingsCenter();
  document.body.classList.add("main-tab-collection");
  updateConnectionStatus();
+ appDataReady=true;appDataReadyResolve?.();window.dispatchEvent(new CustomEvent("wc-app-data-ready"));
  hideLoading();
 }
 function readJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
@@ -2085,8 +2136,10 @@ initialiseAppUpdates();
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});
 
 
-/* Build 701.3.2 · Update-loop fix and repository cleanup */
+/* Build 702.2 · onboarding completo */
 document.addEventListener("DOMContentLoaded",()=>{
+ $("#onboardingForm")?.addEventListener("submit",createFirstCloudCollection);
+ $("#onboardingStartButton")?.addEventListener("click",()=>{closeFirstCollectionOnboarding();switchMainView?.("collection");window.scrollTo({top:0,behavior:"auto"});showToast("Colección creada y sincronizada ✓")});
  const form=$("#editCollectionForm");
  if(form)form.addEventListener("submit",event=>{event.preventDefault();saveEditedCollection()});
  $("#closeEditCollectionDialog")?.addEventListener("click",closeEditCollection);
