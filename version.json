@@ -1,9 +1,9 @@
 {
-  "version": "703.4.10",
-  "appVersion": "7.0.3.4.8",
-  "releasedAt": "2026-07-18T23:55:00+02:00",
-  "name": "Recuperación del viewport de Cromos tras compartir",
-  "build": "703.4.10",
-  "label": "Corrección específica de Cromos y recarga diferida",
-  "notes": "Espera a que el panel nativo cierre, fuerza navegación nueva y evita el conflicto sticky/backdrop de Cromos"
+  "version": "703.4.11",
+  "appVersion": "7.0.3.4.11",
+  "releasedAt": "2026-07-19T01:20:00+02:00",
+  "name": "Corrección real de la barra de filtros de Cromos",
+  "build": "703.4.11",
+  "label": "Cromos sin capa sticky tras compartir",
+  "notes": "La barra Todos/Pedir/Entregar pasa a flujo normal y elimina la capa sticky/backdrop que iOS conservaba dañada tras compartir."
 }
