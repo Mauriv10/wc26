@@ -1,3 +1,10 @@
+# Build 703.4.2
+
+- Corrige el viewport comprimido que iOS puede conservar después de compartir con WhatsApp u otra aplicación.
+- En la PWA instalada de iPhone/iPad guarda el estado actual y realiza una recarga controlada al regresar.
+- Conserva colección activa, filtros, selección y posición de desplazamiento.
+- Mantiene la corrección de caché y versión verificable de la 703.4.1.
+
 # Build 703.4.1
 
 - Corrige el número de versión estático que seguía mostrando 703.2 en `index.html`.

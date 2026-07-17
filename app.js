@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"703.4.1";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"703.4.2";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -251,7 +251,7 @@ window.addEventListener("pageshow",recoverFromForeground);
 window.addEventListener("focus",recoverFromForeground);
 
 
-// Build 703.4.1: native-share recovery without locking the nav to VisualViewport.
+// Build 703.4.2: native-share recovery without locking the nav to VisualViewport.
 // The previous top-coordinate strategy could move the bar while scrolling because
 // visualViewport.offsetTop changes during browser UI animations.
 function resetBottomNavigationAfterNativeUI(){
@@ -270,6 +270,33 @@ function resetBottomNavigationAfterNativeUI(){
 function scheduleBottomNavigationReset(){
  resetBottomNavigationAfterNativeUI();
  [50,180,420,850,1400].forEach(delay=>setTimeout(resetBottomNavigationAfterNativeUI,delay));
+}
+
+// Build 703.4.2: iOS can keep a permanently compressed visual viewport after
+// returning from the native share sheet. CSS and resize events cannot repair
+// that browser-level state reliably. In the installed iPhone/iPad PWA we save
+// the current UI state and perform a controlled reload once the app is visible
+// again. This reproduces the manual close/reopen workaround without losing the
+// active collection, filters, selected team or scroll position.
+let nativeShareReloadScheduled=false;
+function isIOSStandalonePWA(){
+ const ua=navigator.userAgent||"";
+ const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+ const standalone=window.matchMedia?.("(display-mode: standalone)")?.matches||navigator.standalone===true;
+ return Boolean(ios&&standalone);
+}
+function recoverIOSViewportAfterNativeShare(){
+ if(!isIOSStandalonePWA()||nativeShareReloadScheduled)return;
+ nativeShareReloadScheduled=true;
+ try{
+   commitProjectStateLocalOnly();
+   sessionStorage.setItem("wc26-native-share-recovery","1");
+ }catch(error){console.warn("No se pudo guardar el estado previo a la recuperación",error)}
+ const reload=()=>setTimeout(()=>window.location.reload(),220);
+ if(document.visibilityState==="visible")reload();
+ else document.addEventListener("visibilitychange",()=>{
+   if(document.visibilityState==="visible")reload();
+ },{once:true});
 }
 window.addEventListener("pageshow",scheduleBottomNavigationReset);
 window.addEventListener("focus",scheduleBottomNavigationReset);
@@ -877,9 +904,13 @@ async function runShareOption(mode){
      }
      resetBottomNavigationAfterNativeUI();
      await new Promise(resolve=>setTimeout(resolve,80));
-     await navigator.share({title,text});
-     scheduleBottomNavigationReset();
-     showToast("Lista compartida ✓");
+     try{
+       await navigator.share({title,text});
+       showToast("Lista compartida ✓");
+     }finally{
+       scheduleBottomNavigationReset();
+       recoverIOSViewportAfterNativeShare();
+     }
      return;
    }
    await copyShareText(text);
@@ -2357,7 +2388,7 @@ initialiseAppUpdates();
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});
 
 
-/* Build 703.4.1 · actualización verificable + recuperación tras compartir */
+/* Build 703.4.2 · actualización verificable + recuperación tras compartir */
 document.addEventListener("DOMContentLoaded",()=>{
  $("#onboardingForm")?.addEventListener("submit",createFirstCloudCollection);
  $("#onboardingStartButton")?.addEventListener("click",()=>{closeFirstCollectionOnboarding();switchMainView?.("collection");window.scrollTo({top:0,behavior:"auto"});showToast("Colección creada y sincronizada ✓")});
