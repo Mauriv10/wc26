@@ -1,3 +1,11 @@
+# Build 703.4.1
+
+- Corrige el número de versión estático que seguía mostrando 703.2 en `index.html`.
+- Añade versionado de URL a CSS y JavaScript para evitar archivos antiguos del navegador.
+- Elimina el anclaje de la barra mediante `VisualViewport`, que podía desplazarla durante el scroll.
+- Restaura la barra con `position: fixed` y `bottom`, y limpia el bloqueo antes y después de compartir.
+- Mantiene todas las funciones de compartir de la 703.2.
+
 # Build 703.4
 
 - Barra inferior anclada al viewport visible real mediante VisualViewport.

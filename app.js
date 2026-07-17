@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"703.4";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"703.4.1";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -251,44 +251,31 @@ window.addEventListener("pageshow",recoverFromForeground);
 window.addEventListener("focus",recoverFromForeground);
 
 
-// Build 703.4: keep the bottom navigation anchored to the real visible viewport.
-// Native share dialogs and background/foreground transitions can leave Chromium
-// and iOS with a stale CSS viewport. We calculate the nav's top coordinate from
-// VisualViewport instead of trusting bottom: 0 alone.
-let bottomNavViewportFrame=0;
-let bottomNavViewportTimers=[];
-function syncBottomNavigationViewport(){
+// Build 703.4.1: native-share recovery without locking the nav to VisualViewport.
+// The previous top-coordinate strategy could move the bar while scrolling because
+// visualViewport.offsetTop changes during browser UI animations.
+function resetBottomNavigationAfterNativeUI(){
  const nav=document.querySelector(".bottom-app-nav");
- if(!nav)return;
- const viewport=window.visualViewport;
- const viewportTop=viewport?.offsetTop||0;
- const viewportHeight=viewport?.height||window.innerHeight||document.documentElement.clientHeight;
- const navHeight=nav.getBoundingClientRect().height||72;
- const compact=window.matchMedia?.("(max-width: 600px)")?.matches;
- const gap=compact?6:8;
- const top=Math.max(viewportTop+gap,viewportTop+viewportHeight-navHeight-gap);
- document.documentElement.style.setProperty("--wc-bottom-nav-top",`${Math.round(top)}px`);
- document.documentElement.style.setProperty("--wc-visible-viewport-height",`${Math.round(viewportHeight)}px`);
- nav.dataset.viewportLocked="true";
+ document.body.classList.remove("share-sheet-open");
+ document.documentElement.style.removeProperty("--wc-bottom-nav-top");
+ document.documentElement.style.removeProperty("--wc-visible-viewport-height");
+ if(nav){
+   delete nav.dataset.viewportLocked;
+   nav.style.removeProperty("top");
+   nav.style.removeProperty("bottom");
+   nav.style.removeProperty("position");
+   void nav.offsetHeight;
+ }
 }
-function scheduleBottomNavigationSync(){
- cancelAnimationFrame(bottomNavViewportFrame);
- bottomNavViewportFrame=requestAnimationFrame(syncBottomNavigationViewport);
- bottomNavViewportTimers.forEach(clearTimeout);
- bottomNavViewportTimers=[50,180,420,850,1400].map(delay=>setTimeout(syncBottomNavigationViewport,delay));
+function scheduleBottomNavigationReset(){
+ resetBottomNavigationAfterNativeUI();
+ [50,180,420,850,1400].forEach(delay=>setTimeout(resetBottomNavigationAfterNativeUI,delay));
 }
-window.addEventListener("resize",scheduleBottomNavigationSync,{passive:true});
-window.addEventListener("orientationchange",scheduleBottomNavigationSync,{passive:true});
-window.addEventListener("pageshow",scheduleBottomNavigationSync);
-window.addEventListener("focus",scheduleBottomNavigationSync);
+window.addEventListener("pageshow",scheduleBottomNavigationReset);
+window.addEventListener("focus",scheduleBottomNavigationReset);
 document.addEventListener("visibilitychange",()=>{
- if(document.visibilityState==="visible")scheduleBottomNavigationSync();
+ if(document.visibilityState==="visible")scheduleBottomNavigationReset();
 });
-if(window.visualViewport){
- window.visualViewport.addEventListener("resize",scheduleBottomNavigationSync,{passive:true});
- window.visualViewport.addEventListener("scroll",scheduleBottomNavigationSync,{passive:true});
-}
-document.addEventListener("DOMContentLoaded",scheduleBottomNavigationSync,{once:true});
 
 function loadProjectState(){
  const p=projects[activeProjectId];
@@ -883,8 +870,15 @@ async function runShareOption(mode){
    if(mode==="share"&&navigator.share){
      // Release every modal scroll lock before opening the native share sheet.
      document.body.classList.remove("share-sheet-open");
+     const shareSheet=document.querySelector("#shareOptionsSheet");
+     if(shareSheet){
+       shareSheet.classList.remove("open");
+       shareSheet.hidden=true;
+     }
+     resetBottomNavigationAfterNativeUI();
+     await new Promise(resolve=>setTimeout(resolve,80));
      await navigator.share({title,text});
-     scheduleBottomNavigationSync();
+     scheduleBottomNavigationReset();
      showToast("Lista compartida ✓");
      return;
    }
@@ -901,7 +895,7 @@ async function runShareOption(mode){
    }
  }finally{
    document.body.classList.remove("share-sheet-open");
-   scheduleBottomNavigationSync();
+   scheduleBottomNavigationReset();
  }
 }
 
@@ -2363,7 +2357,7 @@ initialiseAppUpdates();
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});
 
 
-/* Build 703.2 · formatos de compartir y copiar + recuperación al volver a primer plano */
+/* Build 703.4.1 · actualización verificable + recuperación tras compartir */
 document.addEventListener("DOMContentLoaded",()=>{
  $("#onboardingForm")?.addEventListener("submit",createFirstCloudCollection);
  $("#onboardingStartButton")?.addEventListener("click",()=>{closeFirstCollectionOnboarding();switchMainView?.("collection");window.scrollTo({top:0,behavior:"auto"});showToast("Colección creada y sincronizada ✓")});

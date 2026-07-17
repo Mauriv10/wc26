@@ -4443,41 +4443,22 @@ body.share-sheet-open{overflow:hidden}
 @media(min-width:760px){.share-options-sheet{align-items:center;padding:24px}.share-options-panel{border-radius:26px;padding:14px 20px 20px;transform:translateY(18px) scale(.98);opacity:0}.share-options-sheet.open .share-options-panel{transform:none;opacity:1}.share-options-handle{display:none}}
 @media(prefers-color-scheme:dark){.share-options-panel{background:#172231;color:#f4f7fb}.share-option-button{background:#111b28;border-color:#314054;color:#f4f7fb}.share-option-button.primary{background:#14263a;border-color:#33577f}.share-option-button>span,#shareOptionsClose{background:#243348;color:#dceaff}.share-option-button small,.share-options-panel header span{color:#9cadc2}}
 
-
 /* =========================================================
-   BUILD 703.4 — REAL VIEWPORT / BOTTOM NAVIGATION FIX
+   BUILD 703.4.1 — STABLE BOTTOM NAV AFTER NATIVE SHARE
    ========================================================= */
-html{
-  min-height:100%;
-  min-height:100dvh;
-}
-body{
-  min-height:100%;
-  min-height:100dvh;
-  padding-bottom:calc(92px + env(safe-area-inset-bottom));
-}
-.bottom-app-nav[data-viewport-locked="true"]{
+html,body{min-height:100%;min-height:100dvh}
+body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.bottom-app-nav{
   position:fixed!important;
-  top:var(--wc-bottom-nav-top)!important;
-  bottom:auto!important;
+  top:auto!important;
+  bottom:max(6px,env(safe-area-inset-bottom))!important;
   margin:0!important;
-  will-change:top;
-  contain:layout paint;
+  will-change:auto!important;
+  contain:none!important;
 }
 @media(max-width:600px){
-  .bottom-app-nav[data-viewport-locked="true"]{
-    left:6px!important;
-    right:6px!important;
-    width:auto!important;
-    max-width:none!important;
-    transform:none!important;
-  }
+  .bottom-app-nav{left:6px!important;right:6px!important;width:auto!important;max-width:none!important;transform:none!important}
 }
 @media(min-width:601px){
-  .bottom-app-nav[data-viewport-locked="true"]{
-    left:50%!important;
-    right:auto!important;
-    width:min(calc(100% - 20px),620px)!important;
-    transform:translateX(-50%)!important;
-  }
+  .bottom-app-nav{left:50%!important;right:auto!important;width:min(calc(100% - 20px),620px)!important;transform:translateX(-50%)!important}
 }
