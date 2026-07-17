@@ -1,3 +1,10 @@
+## Build 703.4.12
+
+- Restaura la barra Todos/Pedir/Entregar fija.
+- Tras compartir en iOS, Cromos desplaza un contenedor interno en lugar del documento.
+- La barra inferior queda fuera de ese scroll y sin desenfoque dinámico.
+- No modifica mensajes, vibración, inventario ni sincronización.
+
 # Build 703.4.10 — Prueba sin desplazamiento automático en Cromos
 
 - Eliminada exclusivamente la llamada `scrollIntoView()` al entrar en el modo de intercambio de Cromos.

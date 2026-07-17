@@ -1,9 +1,9 @@
 {
-  "version": "703.4.11",
-  "appVersion": "7.0.3.4.11",
-  "releasedAt": "2026-07-19T01:20:00+02:00",
-  "name": "Corrección real de la barra de filtros de Cromos",
-  "build": "703.4.11",
-  "label": "Cromos sin capa sticky tras compartir",
-  "notes": "La barra Todos/Pedir/Entregar pasa a flujo normal y elimina la capa sticky/backdrop que iOS conservaba dañada tras compartir."
+  "version": "703.4.12",
+  "appVersion": "7.0.3.4.12",
+  "releasedAt": "2026-07-18T01:45:00+02:00",
+  "name": "Scroll aislado de Cromos tras compartir",
+  "build": "703.4.12",
+  "label": "Barra fija y navegación estable en iOS",
+  "notes": "Tras compartir en iOS, Cromos usa su propio contenedor de desplazamiento. Todos/Pedir/Entregar permanece fijo y la navegación inferior queda fuera del scroll."
 }

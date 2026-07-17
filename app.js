@@ -251,7 +251,7 @@ window.addEventListener("pageshow",recoverFromForeground);
 window.addEventListener("focus",recoverFromForeground);
 
 
-// Build 703.4.11: wait until the native share sheet has fully released the
+// Build 703.4.12: wait until the native share sheet has fully released the
 // iOS viewport, then force a genuinely new navigation. Reloading immediately
 // when navigator.share() resolves can preserve the damaged WebKit compositor.
 let nativeShareReloadPending=false;
@@ -309,7 +309,10 @@ async function reloadAfterSuccessfulNativeShare(){
  resetBottomNavigationAfterNativeUI();
  await persistBeforeNativeShareReload();
  await waitForStableIOSViewport();
- try{sessionStorage.setItem("wc26-share-reloaded-at",String(Date.now()))}catch{}
+ try{
+   sessionStorage.setItem("wc26-share-reloaded-at",String(Date.now()));
+   sessionStorage.setItem("wc26-ios-scroll-isolation","1");
+ }catch{}
  const url=new URL(window.location.href);
  url.hash="";
  url.searchParams.set("share-recovery",String(Date.now()));
@@ -322,6 +325,16 @@ try{
  if(startupUrl.searchParams.has("share-recovery")){
    startupUrl.searchParams.delete("share-recovery");
    history.replaceState(history.state,"",startupUrl.pathname+(startupUrl.search?startupUrl.search:"")+startupUrl.hash);
+ }
+}catch{}
+
+// Build 703.4.12: after returning from the native iOS share sheet, isolate
+// the Cromos scroll from the document. The fixed bottom navigation then lives
+// in a separate compositor layer while Todos/Pedir/Entregar remains sticky
+// inside the inventory scroller.
+try{
+ if(isIOSStandalonePWA()&&sessionStorage.getItem("wc26-ios-scroll-isolation")==="1"){
+   document.body.classList.add("ios-share-scroll-isolation");
  }
 }catch{}
 
