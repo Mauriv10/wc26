@@ -1875,7 +1875,7 @@ window.addEventListener("scroll",()=>{
  },180);
 },{passive:true});
 
-const PUBLIC_BUILD_VERSION="700.8";
+const PUBLIC_BUILD_VERSION="700.8.1";
 let serviceWorkerRegistration=null;
 let updateReloadStarted=false;
 

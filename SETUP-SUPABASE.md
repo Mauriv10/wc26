@@ -15,7 +15,7 @@ Esta versión añade la pantalla de acceso y mantiene intacto el inventario loca
 
 En **Authentication → URL Configuration**:
 
-- Site URL: `https://mauriv10.github.io/Panini-World-Cup-2026/`
+- Site URL: `https://mauriv10.github.io/wc26/`
 - Añade la misma dirección en Redirect URLs.
 
 ## 3. Proveedores
