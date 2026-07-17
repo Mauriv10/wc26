@@ -71,8 +71,18 @@
       const previous = state.session;
       state.session = session;
       updateAccountUI();
-      if (session) { closeGate(); showSplash("Cargando tus colecciones…"); }
-      else if (event === "SIGNED_OUT") openGate("welcome");
+
+      // Supabase refreshes the token when a tab or installed PWA returns to
+      // the foreground. TOKEN_REFRESHED must never reopen the full-screen
+      // splash: the collection is already loaded and there is nothing to wait for.
+      const changedUser = previous?.user?.id !== session?.user?.id;
+      const needsInitialLoad = Boolean(session) && (!previous || changedUser || event === "SIGNED_IN");
+      if (session) {
+        closeGate();
+        if (needsInitialLoad) showSplash("Cargando tus colecciones…");
+      } else if (event === "SIGNED_OUT") {
+        openGate("welcome");
+      }
       emit("wc-auth-changed", { event, session, previousSession: previous });
     });
     state.ready = true; updateAccountUI();

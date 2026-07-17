@@ -1,3 +1,11 @@
+# Build 703.1
+
+- Corregido el bloqueo en «Cargando tus colecciones…» al volver desde segundo plano en iPhone.
+- Corregido el mismo bloqueo al cambiar de pestaña y regresar en navegadores de ordenador.
+- Los eventos de renovación de sesión de Supabase ya no reabren el splash completo.
+- Añadida recuperación mediante `visibilitychange`, `pageshow` y `focus`.
+- Se mantienen las listas compartibles de la Build 703.0.
+
 # Build 703.0
 
 - Nuevo botón **Compartir** dentro de **Me faltan**.

@@ -228,6 +228,28 @@ window.addEventListener("wc-auth-changed",event=>{
  if(!session){cloudSession=null;cloudReady=false;if(cloudSubscription)cloudClient()?.removeChannel(cloudSubscription);cloudSubscription=null}
 });
 window.addEventListener("online",()=>{if(cloudSession){cloudReady=true;scheduleCloudSave(100)}});
+
+// Build 703.1: foreground recovery for iOS PWAs and desktop browser tabs.
+// A token refresh or a restored page must not leave the loading overlay above
+// an application whose cloud state is already available.
+let foregroundRecoveryTimer=null;
+function recoverFromForeground(){
+ if(document.visibilityState&&document.visibilityState!=="visible")return;
+ clearTimeout(foregroundRecoveryTimer);
+ foregroundRecoveryTimer=setTimeout(()=>{
+   const authGate=$("#authGate");
+   const onboardingGate=$("#onboardingGate");
+   const authIsOpen=authGate&&!authGate.hidden;
+   const onboardingIsOpen=onboardingGate&&!onboardingGate.hidden;
+   if(cloudReady&&!authIsOpen&&!onboardingIsOpen){
+     hideAppSplash();
+   }
+ },120);
+}
+document.addEventListener("visibilitychange",recoverFromForeground);
+window.addEventListener("pageshow",recoverFromForeground);
+window.addEventListener("focus",recoverFromForeground);
+
 function loadProjectState(){
  const p=projects[activeProjectId];
  ensureProjectTeamOrder(p);
@@ -2235,7 +2257,7 @@ initialiseAppUpdates();
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});
 
 
-/* Build 703.0 · compartir listas + onboarding completo */
+/* Build 703.1 · recuperación al volver a primer plano + compartir listas */
 document.addEventListener("DOMContentLoaded",()=>{
  $("#onboardingForm")?.addEventListener("submit",createFirstCloudCollection);
  $("#onboardingStartButton")?.addEventListener("click",()=>{closeFirstCollectionOnboarding();switchMainView?.("collection");window.scrollTo({top:0,behavior:"auto"});showToast("Colección creada y sincronizada ✓")});
