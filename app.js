@@ -1,6 +1,6 @@
-const APP_VERSION="701.1";
+const APP_VERSION="701.1.1";
 const DATA_SCHEMA_VERSION=2;
-const DATA_REVISION="2026-07-17-collections-v7011";
+const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
@@ -239,7 +239,7 @@ window.addEventListener("online",updateConnectionStatus);
 window.addEventListener("offline",updateConnectionStatus);
 
 async function loadData(){
- showLoading("Preparando tus coleccións…");
+ showLoading("Preparando tus colecciones…");
  const [i,f,g,s]=await Promise.all([
    fetch("./data/inventory.json"),
    fetch("./data/flags-v4.json"),
@@ -1307,7 +1307,7 @@ async function exportProjectXlsx(){
 }
 $("#excelButton").onclick=exportProjectXlsx;
 
-$("#resetButton").onclick=()=>{if(confirm("¿Restaurar este colección con el inventario cargado desde el último Excel maestro?")){inventory=getMasterInventoryForProject(projects[activeProjectId]);history=[];sessionStats={plus:0,minus:0,startedAt:new Date().toISOString()};exchange={give:{},receive:{}};pendingSync={};saveAll("Inventario restaurado");renderAll()}};
+$("#resetButton").onclick=()=>{if(confirm("¿Restaurar esta colección con el inventario cargado desde el último Excel maestro?")){inventory=getMasterInventoryForProject(projects[activeProjectId]);history=[];sessionStats={plus:0,minus:0,startedAt:new Date().toISOString()};exchange={give:{},receive:{}};pendingSync={};saveAll("Inventario restaurado");renderAll()}};
 
 
 function projectStats(p){
@@ -1386,8 +1386,8 @@ function switchProject(id){
  if($("#projectsDialog")?.open)$("#projectsDialog").close();showToast(`Colección: ${projects[id].name}`);
 }
 function deleteProject(id){
- if(id===activeProjectId){alert("Cambia primero a otro colección.");return}
- if(!confirm(`¿Eliminar el colección "${projects[id].name}"?`))return;
+ if(id===activeProjectId){alert("Cambia primero a otra colección.");return}
+ if(!confirm(`¿Eliminar la colección "${projects[id].name}"?`))return;
  createAutomaticBackup("antes-de-eliminar-colección");
  delete projects[id];persistProjects();renderProjectsList();
 }
@@ -1425,14 +1425,14 @@ function updateTransferPreview(){
 function createProject(){
  const name=$("#newProjectName").value.trim();
  const target=Math.max(1,Number($("#newProjectTarget").value)||1);
- if(!name){alert("Escribe un nombre para el colección.");return}
+ if(!name){alert("Escribe un nombre para la colección.");return}
  const sourceType=document.querySelector('input[name="projectSource"]:checked')?.value||"empty";
  let inv=emptyInventory(),transfer=null,source=null;
  if(sourceType==="repeats"){
    source=projects[$("#sourceProjectSelect").value];
    const mode=document.querySelector('input[name="repeatMode"]:checked')?.value||"target";
    transfer=calculateTransfer(source,target,mode);inv=transfer.inventory;
-   if(!confirm(`Crear "${name}" transfiriendo ${transfer.units} cromos del colección "${source.name}"?`))return;
+   if(!confirm(`Crear "${name}" transfiriendo ${transfer.units} cromos dla colección "${source.name}"?`))return;
  }
  if(sourceType==="repeats")createAutomaticBackup("antes-de-transferir-repetidas");
  const p=defaultProject(name,target,inv);
@@ -1443,7 +1443,7 @@ function createProject(){
    }));
  }
  commitProjectState();activeProjectId=p.id;persistProjects();$("#createProjectDialog").close();loadProjectState();renderProjectsList();
- showToast(`Colección creado: ${name}`);
+ showToast(`Colección creada: ${name}`);
 }
 $("#projectSelectorButton").onclick=()=>{renderProjectsList();$("#projectsDialog").showModal()};
 $("#newProjectQuickButton").onclick=openCreateProject;
@@ -1503,7 +1503,7 @@ function validateBackup(data){
    throw new Error("El archivo no es una copia válida de Panini Mercat.");
  }
  const projectValues=Object.values(data.projects);
- if(!projectValues.length)throw new Error("La copia no contiene coleccións.");
+ if(!projectValues.length)throw new Error("La copia no contiene colecciones.");
  for(const project of projectValues){
    if(!project.id||!project.name||!project.inventory)throw new Error("La copia contiene un colección incompleto.");
  }
@@ -1516,7 +1516,7 @@ function backupSummaryHtml(data){
      teamSum+Object.values(stickers).reduce((a,b)=>a+Number(b||0),0)
    ,0)
  ,0);
- return `<strong>${projectsCount} coleccións</strong><br>
+ return `<strong>${projectsCount} colecciones</strong><br>
  <span>${total} cromos · copia del ${new Date(data.createdAt).toLocaleString("es-ES")}</span>`;
 }
 async function readBackupFile(file){
@@ -1574,8 +1574,8 @@ $("#confirmRestoreBackupButton").onclick=()=>{
  if(!pendingBackupRestore)return;
  const mode=document.querySelector('input[name="restoreMode"]:checked')?.value||"replace";
  const message=mode==="replace"
-   ?"Se reemplazarán todos los coleccións actuales. ¿Continuar?"
-   :"Los coleccións de la copia se añadirán como coleccións nuevos. ¿Continuar?";
+   ?"Se reemplazarán todos los colecciones actuales. ¿Continuar?"
+   :"Los colecciones de la copia se añadirán como colecciones nuevos. ¿Continuar?";
  if(!confirm(message))return;
  restoreBackup(pendingBackupRestore,mode);
  $("#restoreBackupDialog").close();
@@ -1799,13 +1799,13 @@ $("#applyExcelImportButton").onclick=applyExcelImport;
 $("#markSyncedButton").onclick=()=>{
  const count=pendingSyncCount();
  if(!count){showToast("No hay cambios pendientes");return}
- if(!confirm(`Marcar ${count} cambios como sincronizados en el colección activo?`))return;
+ if(!confirm(`Marcar ${count} cambios como sincronizados en la colección activa?`))return;
  pendingSync={};
  lastSyncedAt=new Date().toISOString();
- saveAll("Colección sincronizado");
+ saveAll("Colección sincronizada");
  renderAll();
  renderProjectsList();
- showToast("✓ Colección marcado como sincronizado");
+ showToast("✓ Colección marcada como sincronizado");
 };
 
 
@@ -1818,18 +1818,12 @@ function setupSettingsCenter(){
  const backupCard=document.querySelector(".backup-card");
  const actions=document.querySelector(".actions");
 
- if(projectBar&&!$("#settingsProjectsSlot").contains(projectBar)){
-   $("#settingsProjectsSlot").appendChild(projectBar);
- }
- if(syncCard&&!$("#settingsSyncSlot").contains(syncCard)){
-   $("#settingsSyncSlot").appendChild(syncCard);
- }
- if(backupCard&&!$("#settingsBackupSlot").contains(backupCard)){
-   $("#settingsBackupSlot").appendChild(backupCard);
- }
- if(actions&&!$("#settingsActionsSlot").contains(actions)){
-   $("#settingsActionsSlot").appendChild(actions);
- }
+ const syncSlot=$("#settingsSyncSlot");
+ const backupSlot=$("#settingsBackupSlot");
+ const actionsSlot=$("#settingsActionsSlot");
+ if(syncCard&&syncSlot&&!syncSlot.contains(syncCard))syncSlot.appendChild(syncCard);
+ if(backupCard&&backupSlot&&!backupSlot.contains(backupCard))backupSlot.appendChild(backupCard);
+ if(actions&&actionsSlot&&!actionsSlot.contains(actions))actionsSlot.appendChild(actions);
 
  const openSettings=()=>{
    if(dialog.open)return;
@@ -1869,9 +1863,10 @@ function setupSettingsCenter(){
 }
 
 
-$("#settingsTargetButton").onclick=()=>{
+const settingsTargetButton=$("#settingsTargetButton");
+if(settingsTargetButton)settingsTargetButton.onclick=()=>{
  const current=getTarget();
- const value=prompt("Objetivo de álbumes para este colección:",String(current));
+ const value=prompt("Objetivo de álbumes para esta colección:",String(current));
  if(value===null)return;
  const next=Math.max(1,Math.min(20,Number(value)||current));
  targetInput.value=String(next);
@@ -1930,7 +1925,7 @@ window.addEventListener("scroll",()=>{
  },180);
 },{passive:true});
 
-const PUBLIC_BUILD_VERSION="700.8.1";
+const PUBLIC_BUILD_VERSION="701.1.1";
 let serviceWorkerRegistration=null;
 let updateReloadStarted=false;
 
