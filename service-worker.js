@@ -1,13 +1,52 @@
-const CACHE_NAME="world-cup-2026-build-700-5";
-const CONFIG_PATH="supabase-config.js";
+const CACHE_NAME="world-cup-2026-build-700-6";
+const NO_CACHE_FILES=["service-worker.js","version.json","supabase-config.js"];
+const NETWORK_FIRST_FILES=["index.html","app.js","auth.js","styles.css","manifest.webmanifest"];
 const ASSETS=["./","./index.html","./styles.css","./app.js","./auth.js","./assets/vendor/jszip.min.js","./manifest.webmanifest","./data/inventory.json","./data/projects-seed.json","./data/flags-v4.json","./data/team-groups.json","./assets/flags/mexico.svg","./assets/flags/sudafrica.svg","./assets/flags/corea-del-sur.svg","./assets/flags/chequia.svg","./assets/flags/canada.svg","./assets/flags/bosnia-y-herzegovina.svg","./assets/flags/catar.svg","./assets/flags/suiza.svg","./assets/flags/brasil.svg","./assets/flags/marruecos.svg","./assets/flags/haiti.svg","./assets/flags/escocia.svg","./assets/flags/estados-unidos.svg","./assets/flags/paraguay.svg","./assets/flags/australia.svg","./assets/flags/turquia.svg","./assets/flags/alemania.svg","./assets/flags/curazao.svg","./assets/flags/costa-de-marfil.svg","./assets/flags/ecuador.svg","./assets/flags/paises-bajos.svg","./assets/flags/japon.svg","./assets/flags/suecia.svg","./assets/flags/tunez.svg","./assets/flags/belgica.svg","./assets/flags/egipto.svg","./assets/flags/iran.svg","./assets/flags/nueva-zelanda.svg","./assets/flags/espana.svg","./assets/flags/cabo-verde.svg","./assets/flags/arabia-saudita.svg","./assets/flags/uruguay.svg","./assets/flags/francia.svg","./assets/flags/senegal.svg","./assets/flags/irak.svg","./assets/flags/noruega.svg","./assets/flags/argentina.svg","./assets/flags/argelia.svg","./assets/flags/austria.svg","./assets/flags/jordania.svg","./assets/flags/portugal.svg","./assets/flags/rd-congo.svg","./assets/flags/uzbekistan.svg","./assets/flags/colombia.svg","./assets/flags/inglaterra.svg","./assets/flags/croacia.svg","./assets/flags/ghana.svg","./assets/flags/panama.svg","./assets/flags/fwc.svg","./assets/icons/world-cup-2026-apple-v522.png","./assets/icons/world-cup-2026-192-v522.png","./assets/icons/world-cup-2026-512-v522.png"];
-self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)));self.skipWaiting()});
-self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))));self.clients.claim()});
-self.addEventListener("fetch",e=>{
-  const url=new URL(e.request.url);
-  if(url.pathname.endsWith(CONFIG_PATH)){
-    e.respondWith(fetch(e.request,{cache:"no-store"}).catch(()=>caches.match(e.request)));
-    return;
-  }
-  e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE_NAME).then(cache=>cache.put(e.request,copy));return r}).catch(()=>c)));
+
+self.addEventListener("install",event=>{
+ event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)));
+});
+
+self.addEventListener("activate",event=>{
+ event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+});
+
+self.addEventListener("message",event=>{
+ if(event.data?.type==="SKIP_WAITING")self.skipWaiting();
+});
+
+async function networkFirst(request){
+ const cache=await caches.open(CACHE_NAME);
+ try{
+   const response=await fetch(request,{cache:"no-store"});
+   if(response&&response.ok)cache.put(request,response.clone());
+   return response;
+ }catch(error){
+   return (await cache.match(request))||(await caches.match("./index.html"));
+ }
+}
+
+self.addEventListener("fetch",event=>{
+ if(event.request.method!=="GET")return;
+ const url=new URL(event.request.url);
+ if(url.origin!==self.location.origin)return;
+ const file=url.pathname.split("/").pop()||"index.html";
+
+ if(NO_CACHE_FILES.includes(file)){
+   event.respondWith(fetch(event.request,{cache:"no-store"}));
+   return;
+ }
+
+ if(event.request.mode==="navigate"||NETWORK_FIRST_FILES.includes(file)){
+   event.respondWith(networkFirst(event.request));
+   return;
+ }
+
+ event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{
+   if(response&&response.ok){
+     const copy=response.clone();
+     caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));
+   }
+   return response;
+ })));
 });

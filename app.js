@@ -1,4 +1,4 @@
-const APP_VERSION="7.0.0.5";
+const APP_VERSION="7.0.0.6";
 const DATA_REVISION="2026-07-17-master-inventarios-1";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
@@ -1894,5 +1894,123 @@ $("#collectionSort").onchange=event=>{
  renderGlobalCollection();
 };
 
-if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"));
+const PUBLIC_BUILD_VERSION="700.6";
+let serviceWorkerRegistration=null;
+let updateReloadStarted=false;
+
+function showAppUpdate(version=PUBLIC_BUILD_VERSION){
+ const banner=document.getElementById("appUpdateBanner");
+ const message=document.getElementById("appUpdateMessage");
+ if(!banner)return;
+ if(message)message.textContent=`La versión ${version} está lista para instalar.`;
+ banner.hidden=false;
+}
+
+function hideAppUpdate(){
+ const banner=document.getElementById("appUpdateBanner");
+ if(banner)banner.hidden=true;
+}
+
+function versionParts(value){
+ return String(value||"").match(/\d+/g)?.map(Number)||[];
+}
+
+function isNewerVersion(remote,current){
+ const a=versionParts(remote),b=versionParts(current);
+ const length=Math.max(a.length,b.length);
+ for(let i=0;i<length;i++){
+   const delta=(a[i]||0)-(b[i]||0);
+   if(delta!==0)return delta>0;
+ }
+ return false;
+}
+
+async function checkPublishedVersion(){
+ try{
+   const response=await fetch(`./version.json?check=${Date.now()}`,{cache:"no-store"});
+   if(!response.ok)return;
+   const info=await response.json();
+   if(isNewerVersion(info.version,PUBLIC_BUILD_VERSION)){
+     showAppUpdate(info.version);
+     serviceWorkerRegistration?.update().catch(()=>{});
+   }
+ }catch(error){
+   console.debug("No se pudo comprobar la versión publicada",error);
+ }
+}
+
+function watchInstallingWorker(worker){
+ if(!worker)return;
+ worker.addEventListener("statechange",()=>{
+   if(worker.state==="installed"&&navigator.serviceWorker.controller){
+     showAppUpdate();
+   }
+ });
+}
+
+async function installAvailableUpdate(){
+ const button=document.getElementById("appUpdateButton");
+ if(button){button.disabled=true;button.textContent="Actualizando…";}
+ try{
+   const registration=serviceWorkerRegistration||await navigator.serviceWorker.getRegistration();
+   if(registration){
+     serviceWorkerRegistration=registration;
+     await registration.update().catch(()=>{});
+     if(registration.waiting){
+       registration.waiting.postMessage({type:"SKIP_WAITING"});
+       return;
+     }
+     if(registration.installing){
+       const worker=registration.installing;
+       worker.addEventListener("statechange",()=>{
+         if(worker.state==="installed")worker.postMessage({type:"SKIP_WAITING"});
+       });
+       return;
+     }
+   }
+   const url=new URL(location.href);
+   url.searchParams.set("updated",Date.now());
+   location.replace(url.toString());
+ }catch(error){
+   console.error("No se pudo aplicar la actualización",error);
+   if(button){button.disabled=false;button.textContent="Reintentar";}
+ }
+}
+
+function initialiseAppUpdates(){
+ const button=document.getElementById("appUpdateButton");
+ if(button)button.addEventListener("click",installAvailableUpdate);
+ if(!("serviceWorker" in navigator))return;
+
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{
+   if(updateReloadStarted)return;
+   updateReloadStarted=true;
+   hideAppUpdate();
+   location.reload();
+ });
+
+ window.addEventListener("load",async()=>{
+   try{
+     const registration=await navigator.serviceWorker.register("./service-worker.js",{updateViaCache:"none"});
+     serviceWorkerRegistration=registration;
+     if(registration.waiting&&navigator.serviceWorker.controller)showAppUpdate();
+     watchInstallingWorker(registration.installing);
+     registration.addEventListener("updatefound",()=>watchInstallingWorker(registration.installing));
+     await registration.update().catch(()=>{});
+     await checkPublishedVersion();
+   }catch(error){
+     console.error("No se pudo registrar el sistema de actualización",error);
+   }
+ });
+
+ document.addEventListener("visibilitychange",()=>{
+   if(document.visibilityState==="visible"){
+     serviceWorkerRegistration?.update().catch(()=>{});
+     checkPublishedVersion();
+   }
+ });
+ setInterval(checkPublishedVersion,5*60*1000);
+}
+
+initialiseAppUpdates();
 loadData().catch(error=>{console.error(error);hideLoading();document.body.innerHTML="<main class='app-main'><h1>Error al cargar</h1><p>Comprueba que todos los archivos estén subidos.</p></main>"});
