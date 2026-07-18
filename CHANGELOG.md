@@ -1,3 +1,15 @@
+# Build 704.1
+
+- Nuevo **Analizador de listas** dentro de Cambiar.
+- Admite códigos oficiales de Panini pegados desde WhatsApp, con comas, espacios o una selección por línea.
+- Solo considera disponibles las unidades que exceden el objetivo de la colección.
+- Separa cromos disponibles, no disponibles y códigos no reconocidos.
+- Sugiere correcciones para abreviaturas con errores simples.
+- Permite copiar únicamente los cromos que sí puedes entregar.
+- El formato de compartir con banderas ahora es compacto: una línea por selección.
+- Las listas exportadas por WC26 pueden analizarse directamente en la app.
+- Se conserva la eliminación del desplazamiento suave en iOS de la Build 703.2.1.
+
 # Build 703.2.1
 
 - Prueba dirigida para iOS PWA después de usar el menú nativo de compartir.

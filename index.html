@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="World Cup 2026">
-  <title>World Cup 2026 · Build 703.2.1</title>
+  <title>World Cup 2026 · Build 704.1</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="canonical" href="https://mauriv10.github.io/wc26/">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/world-cup-2026-apple-v522.png">
@@ -339,6 +339,16 @@
     <button id="openClassicExchangeButton" type="button">Empezar</button>
   </section>
 
+  <section class="trade-option-card trade-option-primary trade-analyzer-card">
+    <div class="trade-option-icon">⌕</div>
+    <div class="trade-option-copy">
+      <span>NUEVO</span>
+      <h3>Analizar lista</h3>
+      <p>Pega la lista de otra persona y comprueba qué cromos tienes realmente disponibles para cambiar.</p>
+    </div>
+    <button id="openTradeAnalyzerButton" type="button">Analizar</button>
+  </section>
+
   <section class="trade-option-card trade-option-upcoming">
     <div class="trade-option-icon">QR</div>
     <div class="trade-option-copy">
@@ -572,7 +582,7 @@
         <div><strong>Información</strong><small>World Cup 2026</small></div>
       </div>
       <div class="settings-info-list">
-        <div><span>Versión</span><strong>Build 703.2 · Compartir y copiar listas</strong></div>
+        <div><span>Versión</span><strong>Build 704.1 · Analizar listas de intercambio</strong></div>
         <div><span>Modo</span><strong>Disponible offline</strong></div>
       </div>
     </section>
@@ -787,6 +797,22 @@
       <button id="deleteCollectionButton" class="danger" type="button">Eliminar colección</button>
     </div>
   </form>
+</dialog>
+
+
+<dialog id="tradeAnalyzerDialog" class="trade-analyzer-dialog">
+  <div class="dialog-header">
+    <div><span class="dialog-kicker">COMPARAR LISTA</span><h2>¿Cuáles puedes darle?</h2></div>
+    <button id="closeTradeAnalyzerDialog" type="button" aria-label="Cerrar">✕</button>
+  </div>
+  <p class="trade-analyzer-help">Pega códigos como <strong>ESP10, KSA15, JPN 03</strong> o una lista compacta con una selección por línea.</p>
+  <textarea id="tradeAnalyzerInput" rows="7" placeholder="ESP10, KSA15, JPN 03
+FRA: 01 07 18"></textarea>
+  <div class="trade-analyzer-actions">
+    <button id="clearTradeAnalyzerButton" type="button" class="secondary">Limpiar</button>
+    <button id="runTradeAnalyzerButton" type="button" class="primary">Analizar lista</button>
+  </div>
+  <section id="tradeAnalyzerResult" class="trade-analyzer-result" hidden></section>
 </dialog>
 
 <div id="shareOptionsSheet" class="share-options-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="shareOptionsTitle">

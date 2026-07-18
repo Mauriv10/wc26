@@ -1,8 +1,8 @@
 {
-  "version": "703.2.1",
-  "appVersion": "7.0.3.2.1",
-  "releasedAt": "2026-07-18T01:00:00+02:00",
-  "name": "Prueba iOS sin desplazamiento suave",
-  "build": "703.2.1",
-  "label": "Build 703.2.1"
+  "version": "704.1",
+  "appVersion": "7.0.4.1",
+  "releasedAt": "2026-07-18T16:30:00+02:00",
+  "name": "Analizador de listas de intercambio",
+  "build": "704.1",
+  "label": "Build 704.1"
 }

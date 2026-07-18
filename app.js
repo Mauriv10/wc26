@@ -739,6 +739,36 @@ const TEAM_FLAG_EMOJI={
  "FWC":"⭐"
 };
 
+const PANINI_TEAM_CODES={
+ "FWC":"FWC","MEX":"México","RSA":"Sudáfrica","KOR":"Corea del Sur","CZE":"Chequia",
+ "CAN":"Canadá","BIH":"Bosnia y Herzegovina","QAT":"Catar","SUI":"Suiza",
+ "BRA":"Brasil","MAR":"Marruecos","HAI":"Haití","SCO":"Escocia",
+ "USA":"Estados Unidos","PAR":"Paraguay","AUS":"Australia","TUR":"Turquía",
+ "GER":"Alemania","CUW":"Curazao","CIV":"Costa de Marfil","ECU":"Ecuador",
+ "NED":"Países Bajos","JPN":"Japón","SWE":"Suecia","TUN":"Túnez",
+ "BEL":"Bélgica","EGY":"Egipto","IRN":"Irán","NZL":"Nueva Zelanda",
+ "ESP":"España","CPV":"Cabo Verde","KSA":"Arabia Saudita","URU":"Uruguay",
+ "FRA":"Francia","SEN":"Senegal","IRQ":"Irak","NOR":"Noruega",
+ "ARG":"Argentina","ALG":"Argelia","AUT":"Austria","JOR":"Jordania",
+ "POR":"Portugal","COD":"RD Congo","UZB":"Uzbekistán","COL":"Colombia",
+ "ENG":"Inglaterra","CRO":"Croacia","GHA":"Ghana","PAN":"Panamá"
+};
+const TEAM_TO_PANINI_CODE=Object.fromEntries(Object.entries(PANINI_TEAM_CODES).map(([code,team])=>[team,code]));
+const PANINI_CODE_ALIASES={JAP:"JPN",SAU:"KSA",NLD:"NED",HOL:"NED",KOR:"KOR",RDC:"COD",DRC:"COD",BOS:"BIH",CZR:"CZE",CRC:"CUW"};
+
+function paniniDisplayCode(team,internalCode){
+ const n=Number(internalCode);
+ return team==="FWC"?String(Math.max(0,n-1)).padStart(2,"0"):String(n).padStart(2,"0");
+}
+
+function paniniInternalCode(team,displayNumber){
+ const n=Number(displayNumber);
+ if(!Number.isInteger(n))return null;
+ if(team==="FWC")return n>=0&&n<=19?String(n+1).padStart(2,"0"):null;
+ return n>=1&&n<=20?String(n).padStart(2,"0"):null;
+}
+
+
 function collectShareGroups(type){
  const target=getTarget();
  const groups=[];
@@ -772,10 +802,14 @@ function buildShareCollectionText(type,{flags=false,compact=false}={}){
    ""
  ];
  groups.forEach((group,index)=>{
-   const heading=(flags?`${TEAM_FLAG_EMOJI[group.team]||""} `:"")+group.team;
-   const stickers=group.items.map(item=>item.units>1?`${item.code} x${item.units}`:item.code).join(", ");
+   const officialCode=TEAM_TO_PANINI_CODE[group.team]||group.team;
+   const heading=(flags?`${TEAM_FLAG_EMOJI[group.team]||""} `:"")+officialCode;
+   const stickers=group.items.map(item=>{
+     const shown=paniniDisplayCode(group.team,item.code);
+     return item.units>1?`${shown} x${item.units}`:shown;
+   }).join(", ");
    if(compact){
-     lines.push(`${group.team}: ${stickers}`);
+     lines.push(`${heading.trim()}: ${stickers}`);
    }else{
      lines.push(heading.trim());
      lines.push(stickers);
@@ -830,7 +864,7 @@ async function copyShareText(text){
 async function runShareOption(mode){
  const type=$("#shareOptionsSheet")?.dataset.type||activeShareListType();
  if(!type)return;
- const options=mode==="share"?{flags:true,compact:false}:mode==="compact"?{flags:false,compact:true}:{flags:false,compact:false};
+ const options=mode==="share"?{flags:true,compact:true}:mode==="compact"?{flags:false,compact:true}:{flags:false,compact:false};
  const {text,totalUnits}=buildShareCollectionText(type,options);
  if(!text||!totalUnits){
    closeShareOptions();
@@ -857,6 +891,113 @@ async function runShareOption(mode){
      showToast("No se pudo compartir la lista");
    }
  }
+}
+
+
+function levenshteinDistance(a,b){
+ const rows=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+ for(let i=0;i<=a.length;i++)rows[i][0]=i;
+ for(let j=0;j<=b.length;j++)rows[0][j]=j;
+ for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)rows[i][j]=Math.min(rows[i-1][j]+1,rows[i][j-1]+1,rows[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+ return rows[a.length][b.length];
+}
+
+function suggestPaniniCode(rawCode){
+ const code=String(rawCode||"").toUpperCase();
+ const alias=PANINI_CODE_ALIASES[code];
+ if(alias)return alias;
+ const best=Object.keys(PANINI_TEAM_CODES).map(candidate=>({candidate,d:levenshteinDistance(code,candidate)})).sort((a,b)=>a.d-b.d)[0];
+ return best&&best.d<=1?best.candidate:null;
+}
+
+function parseTradeList(rawText){
+ const found=[];
+ const invalid=[];
+ const seen=new Set();
+ const invalidSeen=new Set();
+ const addInvalid=(raw,reason,suggestion="")=>{
+   const key=`${raw}|${reason}`;
+   if(!raw||invalidSeen.has(key))return;
+   invalidSeen.add(key);invalid.push({raw,reason,suggestion});
+ };
+ const addSticker=(rawCode,number,rawToken)=>{
+   let code=String(rawCode||"").toUpperCase();
+   code=PANINI_CODE_ALIASES[code]||code;
+   const team=PANINI_TEAM_CODES[code];
+   if(!team){addInvalid(rawToken||`${rawCode}${number}`,"Código de selección no reconocido",suggestPaniniCode(rawCode)||"");return;}
+   const internalCode=paniniInternalCode(team,number);
+   if(!internalCode){addInvalid(rawToken||`${code}${number}`,team==="FWC"?"FWC admite números del 00 al 19":"El número debe estar entre 01 y 20");return;}
+   const key=`${team}|${internalCode}`;
+   if(seen.has(key))return;
+   seen.add(key);found.push({team,officialCode:code,internalCode,displayCode:paniniDisplayCode(team,internalCode)});
+ };
+ const lines=String(rawText||"").replace(/\r/g,"").split("\n");
+ lines.forEach(originalLine=>{
+   const line=originalLine.toUpperCase().replace(/[×X]\s*\d+/g,"").replace(/[：]/g,":");
+   if(!line.trim())return;
+   const leading=line.match(/(?:^|\s)([A-Z]{3})\s*[:\-]?\s*(.*)$/);
+   if(leading){
+     const rawCode=leading[1];
+     const canonical=PANINI_CODE_ALIASES[rawCode]||rawCode;
+     if(PANINI_TEAM_CODES[canonical]){
+       const rest=leading[2];
+       const nums=[...rest.matchAll(/\b(\d{1,2})\b/g)].map(m=>m[1]);
+       if(nums.length&&!/[A-Z]/.test(rest)){nums.forEach(n=>addSticker(rawCode,n,`${rawCode}${n}`));return;}
+     }
+   }
+   const matches=[...line.matchAll(/\b([A-Z]{3})\s*[-:]?\s*(\d{1,2})\b/g)];
+   matches.forEach(m=>addSticker(m[1],m[2],m[0].trim()));
+   const candidateTokens=[...line.matchAll(/\b([A-Z]{3})\s*[-:]?\s*(\d{1,2})\b/g)];
+   if(!candidateTokens.length){
+     const suspicious=[...line.matchAll(/\b[A-Z]{3}\d{0,2}\b/g)].map(m=>m[0]);
+     suspicious.forEach(token=>{
+       const m=token.match(/^([A-Z]{3})(\d{1,2})?$/);
+       if(m&&m[2])addSticker(m[1],m[2],token);
+     });
+   }
+ });
+ return {found,invalid};
+}
+
+function groupTradeAnalysis(items){
+ const order=currentTeamOrder();
+ const groups={};
+ items.forEach(item=>(groups[item.team]||=[]).push(item));
+ return Object.entries(groups).sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));
+}
+
+function renderTradeAnalyzerResult(){
+ const input=$("#tradeAnalyzerInput");
+ const result=$("#tradeAnalyzerResult");
+ if(!input||!result)return;
+ const parsed=parseTradeList(input.value);
+ if(!parsed.found.length&&!parsed.invalid.length){result.hidden=false;result.innerHTML='<div class="trade-analyzer-empty">No se ha encontrado ningún código de cromo. Prueba con formatos como ESP10, KSA15 o JPN 03.</div>';return;}
+ const target=getTarget();
+ const analysed=parsed.found.map(item=>{
+   const owned=Number(inventory?.[item.team]?.[item.internalCode])||0;
+   const available=Math.max(0,owned-target);
+   return {...item,owned,available};
+ });
+ const available=analysed.filter(item=>item.available>0);
+ const unavailable=analysed.filter(item=>item.available<=0);
+ const availableUnits=available.reduce((sum,item)=>sum+item.available,0);
+ const renderGroups=(items,kind)=>groupTradeAnalysis(items).map(([team,rows])=>`<div class="trade-analyzer-group"><div class="trade-analyzer-group-title"><span>${TEAM_FLAG_EMOJI[team]||""}</span><span>${TEAM_TO_PANINI_CODE[team]||team}</span></div><div class="trade-analyzer-items">${rows.map(row=>kind==="available"?`<span class="available">${row.displayCode} ×${row.available}</span>`:`<span class="unavailable">${row.displayCode}</span>`).join(" · ")}</div></div>`).join("");
+ const invalidHtml=parsed.invalid.length?`<section class="trade-analyzer-section"><h3>⚠️ No reconocidos (${parsed.invalid.length})</h3>${parsed.invalid.map(item=>`<div class="trade-analyzer-warning"><strong>${item.raw}</strong> · ${item.reason}${item.suggestion?`<br>¿Querías decir <b>${item.suggestion}</b>?`:""}</div>`).join("")}</section>`:"";
+ result.innerHTML=`<div class="trade-analyzer-summary"><div><strong>${analysed.length}</strong><span>SOLICITADOS</span></div><div><strong>${available.length}</strong><span>DISPONIBLES</span></div><div><strong>${availableUnits}</strong><span>UNIDADES PARA DAR</span></div></div>${available.length?`<section class="trade-analyzer-section"><h3>✅ Puedes entregar</h3>${renderGroups(available,"available")}</section><button id="copyTradeAnalyzerAvailable" class="trade-analyzer-copy" type="button">Copiar disponibles</button>`:'<div class="trade-analyzer-empty">No tienes ninguno de estos cromos por encima de tu objetivo.</div>'}${unavailable.length?`<section class="trade-analyzer-section"><h3>❌ No disponibles (${unavailable.length})</h3>${renderGroups(unavailable,"unavailable")}</section>`:""}${invalidHtml}`;
+ result.hidden=false;
+ const copyButton=$("#copyTradeAnalyzerAvailable");
+ if(copyButton)copyButton.onclick=async()=>{
+   const lines=groupTradeAnalysis(available).map(([team,rows])=>`${TEAM_FLAG_EMOJI[team]||""} ${TEAM_TO_PANINI_CODE[team]||team}: ${rows.map(row=>row.available>1?`${row.displayCode} x${row.available}`:row.displayCode).join(", ")}`);
+   try{await copyShareText(lines.join("\n"));showToast("Disponibles copiados ✓");}catch(error){showToast("No se pudo copiar");}
+ };
+}
+
+function openTradeAnalyzer(){
+ const dialog=$("#tradeAnalyzerDialog");
+ if(!dialog)return;
+ $("#tradeAnalyzerResult").hidden=true;
+ dialog.showModal();
+ setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),80);
 }
 
 async function shareActiveCollectionList(){
@@ -2145,6 +2286,11 @@ $("#shareCollectionListButton")?.addEventListener("click",shareActiveCollectionL
 $("#shareOptionsClose")?.addEventListener("click",closeShareOptions);
 $("#shareOptionsBackdrop")?.addEventListener("click",closeShareOptions);
 document.querySelectorAll("[data-share-option]").forEach(button=>button.addEventListener("click",()=>runShareOption(button.dataset.shareOption)));
+$("#openTradeAnalyzerButton")?.addEventListener("click",openTradeAnalyzer);
+$("#closeTradeAnalyzerDialog")?.addEventListener("click",()=>$("#tradeAnalyzerDialog")?.close());
+$("#runTradeAnalyzerButton")?.addEventListener("click",renderTradeAnalyzerResult);
+$("#clearTradeAnalyzerButton")?.addEventListener("click",()=>{const input=$("#tradeAnalyzerInput");if(input)input.value="";const result=$("#tradeAnalyzerResult");if(result){result.hidden=true;result.innerHTML="";}input?.focus();});
+$("#tradeAnalyzerDialog")?.addEventListener("click",event=>{if(event.target===$("#tradeAnalyzerDialog"))$("#tradeAnalyzerDialog").close();});
 
 document.querySelectorAll(".collection-filter-button").forEach(button=>button.onclick=()=>{
  document.querySelectorAll(".collection-filter-button").forEach(x=>x.classList.remove("active"));
