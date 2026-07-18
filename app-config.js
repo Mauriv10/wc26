@@ -1,8 +1,5 @@
-/* Central build metadata. Update this file for every published build. */
-(function (scope) {
-  scope.WC26_CONFIG = Object.freeze({
-    version: "704.1.1",
-    label: "Build 704.1.1",
-    cacheName: "wc26-build-704-1-1"
-  });
-})(typeof self !== "undefined" ? self : globalThis);
+globalThis.WC26_CONFIG = {
+  version: "704.2",
+  cacheName: "wc26-cache-704.2",
+  updateMessage: "Nueva versión 704.2 disponible"
+};

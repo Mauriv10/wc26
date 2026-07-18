@@ -4488,3 +4488,27 @@ html,body{scroll-behavior:auto!important}
  .trade-analyzer-dialog,.trade-analyzer-dialog h2,.trade-analyzer-dialog h3,.trade-analyzer-dialog strong,.trade-analyzer-group-title{color:#f4f7fb}
  .trade-analyzer-edit{background:#111b28;border-color:#314054;color:#75b3ff}
 }
+
+/* Build 704.2 · Asistente de intercambio a pantalla completa */
+.trade-analyzer-dialog{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;border:0;border-radius:0;padding:0;background:#f4f7fb;color:#17263b;overflow:hidden}
+.trade-analyzer-dialog::backdrop{background:#f4f7fb}
+.trade-analyzer-shell{height:100%;display:flex;flex-direction:column;background:#f4f7fb;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.trade-analyzer-dialog .dialog-header{flex:0 0 auto;padding:15px 18px 12px;background:#fff;border-bottom:1px solid #e3eaf2;align-items:center}
+.trade-analyzer-dialog .dialog-header h2{font-size:1.2rem;margin:2px 0 0}.trade-analyzer-dialog .dialog-kicker{font-size:.68rem;color:#1473e6;font-weight:900;letter-spacing:.08em}
+.trade-analyzer-dialog #closeTradeAnalyzerDialog{width:42px;height:42px;border:0;border-radius:50%;background:#eef3f8;color:#31445b;font-size:1rem}
+.trade-analyzer-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(28px + env(safe-area-inset-bottom))}
+.trade-analyzer-entry,.trade-analyzer-result{width:min(100%,760px);margin:0 auto}.trade-analyzer-result{border:0;padding:0;max-height:none;overflow:visible}
+.trade-analyzer-help{padding:0;margin:0 0 13px;color:#62748a}.trade-analyzer-dialog #tradeAnalyzerInput{width:100%;margin:0;min-height:180px;background:#fff}
+.trade-analyzer-actions{padding:13px 0 0}.trade-analyzer-edit{position:sticky;top:-1px;z-index:3;box-shadow:0 5px 16px rgba(23,38,59,.08)}
+.trade-analyzer-summary{position:relative}.trade-analyzer-section,.trade-balance-card{background:#fff;border:1px solid #e1e9f2;border-radius:20px;padding:16px;margin-top:14px;box-shadow:0 5px 18px rgba(23,38,59,.05)}
+.trade-analyzer-section>h3,.trade-balance-card>h3{font-size:1rem;margin:0 0 8px}.trade-category-summary{margin:0 0 10px;color:#6b7d92;font-size:.82rem;font-weight:750}
+.trade-analyzer-group{background:#f5f8fc}.trade-analyzer-items{display:flex;flex-wrap:wrap;gap:7px;line-height:1.3}
+.trade-sticker-pill{display:inline-flex;align-items:center;gap:5px;min-height:38px;padding:4px 5px 4px 10px;border:1px solid #dbe5ef;border-radius:12px;background:#fff;color:#087443;font-weight:800}
+.trade-sticker-pill small{max-width:120px;font-size:.65rem;color:#53677d;font-weight:700}.trade-sticker-pill button{width:29px;height:29px;border:0;border-radius:9px;background:#edf3f9;color:#4d6279;font-size:.9rem;padding:0}.trade-sticker-pill.is-star{border-color:#e5b944;background:#fffaf0}.trade-sticker-pill.is-protected{box-shadow:inset 0 0 0 1px #e6a95d}
+.trade-analyzer-copy{margin-top:12px}.trade-balance-card>p{margin:0 0 13px;color:#65768a;font-size:.87rem;line-height:1.45}
+.trade-receive-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:4px;border-radius:13px;background:#eef3f8;margin-bottom:11px}.trade-receive-tabs button{min-height:40px;border:0;border-radius:10px;background:transparent;color:#5b6d81;font-weight:800}.trade-receive-tabs button.active{background:#fff;color:#1473e6;box-shadow:0 2px 7px rgba(23,38,59,.1)}
+#tradeReceiveList{box-sizing:border-box;width:100%;min-height:105px;resize:vertical;border:1px solid #d8e2ee;border-radius:14px;padding:12px;background:#f8fafc;color:#17263b;font:inherit}
+#tradeReceiveCountsPanel{display:grid;grid-template-columns:1fr 1fr;gap:10px}#tradeReceiveCountsPanel label{display:grid;gap:6px;font-size:.78rem;font-weight:800;color:#637489}#tradeReceiveCountsPanel input{width:100%;box-sizing:border-box;min-height:46px;border:1px solid #d8e2ee;border-radius:12px;padding:0 12px;background:#fff;color:#17263b;font:inherit;font-weight:800}
+.balanced-summary{display:grid;gap:3px;margin-top:13px;padding:14px;border-radius:14px;background:#eef7ff}.balanced-summary strong{color:#173b64}.balanced-summary span{font-size:.8rem;color:#60748c;margin-bottom:6px}
+@media(max-width:600px){.trade-analyzer-dialog{align-self:auto;width:100%;max-width:none;margin:0;border-radius:0}.trade-analyzer-result{max-height:none}.trade-analyzer-scroll{padding-left:12px;padding-right:12px}.trade-analyzer-summary span{font-size:.62rem}.trade-analyzer-section,.trade-balance-card{padding:14px}.trade-sticker-pill small{display:none}}
+@media(prefers-color-scheme:dark){.trade-analyzer-dialog,.trade-analyzer-shell{background:#0e1723;color:#f4f7fb}.trade-analyzer-dialog::backdrop{background:#0e1723}.trade-analyzer-dialog .dialog-header{background:#152130;border-color:#2b394b}.trade-analyzer-dialog #closeTradeAnalyzerDialog{background:#243348;color:#e6eef8}.trade-analyzer-section,.trade-balance-card{background:#172331;border-color:#2d3c50}.trade-analyzer-group{background:#111b28}.trade-sticker-pill{background:#192737;border-color:#34465b;color:#69d79f}.trade-sticker-pill small{color:#aabbd0}.trade-sticker-pill button{background:#26374b;color:#d9e6f4}.trade-sticker-pill.is-star{background:#302b1b;border-color:#8d7434}.trade-receive-tabs{background:#101a27}.trade-receive-tabs button.active{background:#27384c;color:#75b3ff}#tradeReceiveList,#tradeReceiveCountsPanel input{background:#111b28;border-color:#314054;color:#f3f7fb}.balanced-summary{background:#132a40}.balanced-summary strong{color:#cde5ff}.balanced-summary span{color:#a9bdd2}}

@@ -1,3 +1,12 @@
+# Build 704.2 — Asistente inteligente de intercambio
+
+- Analizador de listas convertido en pantalla completa.
+- Copia de la lista completa de coincidencias.
+- Generación de intercambios equilibrados normal por normal y especial por especial.
+- FWC y escudos (número 01) tratados como especiales; fotos de equipo como normales.
+- Estrellas TOP protegidas por defecto y controles para marcar estrellas o proteger otros cromos.
+- Admite pegar la lista recibida o introducir cantidades de normales y especiales.
+
 # Build 704.1.1
 
 - Desactiva definitivamente el desplazamiento suave para evitar el movimiento de la barra inferior al volver de WhatsApp en iOS.

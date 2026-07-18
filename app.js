@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"702.2";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.2";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -902,6 +902,32 @@ async function runShareOption(mode){
 }
 
 
+const DEFAULT_TOP_STARS={
+ "ESP|15":"Lamine Yamal","ENG|11":"Jude Bellingham","ENG|18":"Harry Kane",
+ "FRA|20":"Kylian Mbappé","FRA|15":"Ousmane Dembélé","FRA|14":"Michael Olise",
+ "POR|15":"Cristiano Ronaldo","ARG|17":"Lionel Messi","NZL|06":"Tim Payne","CPV|02":"Vozinha"
+};
+
+function tradeStickerKey(item){return `${item.officialCode}|${item.displayCode}`}
+function currentTradePreferences(){
+ const project=projects?.[activeProjectId];
+ if(!project)return {stars:{},protected:{}};
+ project.tradePreferences=project.tradePreferences||{stars:{},protected:{}};
+ project.tradePreferences.stars=project.tradePreferences.stars||{};
+ project.tradePreferences.protected=project.tradePreferences.protected||{};
+ return project.tradePreferences;
+}
+function isTradeStar(item){const key=tradeStickerKey(item);return Boolean(DEFAULT_TOP_STARS[key]||currentTradePreferences().stars[key])}
+function isTradeProtected(item){const key=tradeStickerKey(item);return Boolean(DEFAULT_TOP_STARS[key]||currentTradePreferences().protected[key])}
+function tradeStarName(item){return DEFAULT_TOP_STARS[tradeStickerKey(item)]||""}
+function tradeStickerCategory(item){return item.team==="FWC"||Number(item.displayCode)===1?"special":"normal"}
+function toggleTradeMark(item,type){
+ const prefs=currentTradePreferences();const key=tradeStickerKey(item);
+ if(DEFAULT_TOP_STARS[key]&&type==="protected"){showToast("Esta estrella TOP está protegida por defecto");return;}
+ prefs[type][key]=!prefs[type][key];if(!prefs[type][key])delete prefs[type][key];
+ persistProjects();renderTradeAnalyzerResult();
+}
+
 function levenshteinDistance(a,b){
  const rows=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
  for(let i=0;i<=a.length;i++)rows[i][0]=i;
@@ -909,136 +935,75 @@ function levenshteinDistance(a,b){
  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)rows[i][j]=Math.min(rows[i-1][j]+1,rows[i][j-1]+1,rows[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
  return rows[a.length][b.length];
 }
-
 function suggestPaniniCode(rawCode){
- const code=String(rawCode||"").toUpperCase();
- const alias=PANINI_CODE_ALIASES[code];
- if(alias)return alias;
+ const code=String(rawCode||"").toUpperCase();const alias=PANINI_CODE_ALIASES[code];if(alias)return alias;
  const best=Object.keys(PANINI_TEAM_CODES).map(candidate=>({candidate,d:levenshteinDistance(code,candidate)})).sort((a,b)=>a.d-b.d)[0];
  return best&&best.d<=1?best.candidate:null;
 }
-
 function parseTradeList(rawText){
- const found=[];
- const invalid=[];
- const seen=new Set();
- const invalidSeen=new Set();
- const addInvalid=(raw,reason,suggestion="")=>{
-   const key=`${raw}|${reason}`;
-   if(!raw||invalidSeen.has(key))return;
-   invalidSeen.add(key);invalid.push({raw,reason,suggestion});
- };
+ const found=[],invalid=[],seen=new Set(),invalidSeen=new Set();
+ const addInvalid=(raw,reason,suggestion="")=>{const key=`${raw}|${reason}`;if(!raw||invalidSeen.has(key))return;invalidSeen.add(key);invalid.push({raw,reason,suggestion});};
  const addSticker=(rawCode,number,rawToken)=>{
-   let code=String(rawCode||"").toUpperCase();
-   code=PANINI_CODE_ALIASES[code]||code;
-   const team=PANINI_TEAM_CODES[code];
+   let code=String(rawCode||"").toUpperCase();code=PANINI_CODE_ALIASES[code]||code;const team=PANINI_TEAM_CODES[code];
    if(!team){addInvalid(rawToken||`${rawCode}${number}`,"Código de selección no reconocido",suggestPaniniCode(rawCode)||"");return;}
-   const internalCode=paniniInternalCode(team,number);
-   if(!internalCode){addInvalid(rawToken||`${code}${number}`,team==="FWC"?"FWC admite números del 00 al 19":"El número debe estar entre 01 y 20");return;}
-   const key=`${team}|${internalCode}`;
-   if(seen.has(key))return;
-   seen.add(key);found.push({team,officialCode:code,internalCode,displayCode:paniniDisplayCode(team,internalCode)});
+   const internalCode=paniniInternalCode(team,number);if(!internalCode){addInvalid(rawToken||`${code}${number}`,team==="FWC"?"FWC admite números del 00 al 19":"El número debe estar entre 01 y 20");return;}
+   const key=`${team}|${internalCode}`;if(seen.has(key))return;seen.add(key);found.push({team,officialCode:code,internalCode,displayCode:paniniDisplayCode(team,internalCode)});
  };
- const lines=String(rawText||"").replace(/\r/g,"").split("\n");
- lines.forEach(originalLine=>{
-   const line=originalLine.toUpperCase().replace(/[×X]\s*\d+/g,"").replace(/[：]/g,":");
-   if(!line.trim())return;
+ String(rawText||"").replace(/\r/g,"").split("\n").forEach(originalLine=>{
+   const line=originalLine.toUpperCase().replace(/[×X]\s*\d+/g,"").replace(/[：]/g,":");if(!line.trim())return;
    const leading=line.match(/(?:^|\s)([A-Z]{3})\s*[:\-]?\s*(.*)$/);
-   if(leading){
-     const rawCode=leading[1];
-     const canonical=PANINI_CODE_ALIASES[rawCode]||rawCode;
-     if(PANINI_TEAM_CODES[canonical]){
-       const rest=leading[2];
-       const nums=[...rest.matchAll(/\b(\d{1,2})\b/g)].map(m=>m[1]);
-       if(nums.length&&!/[A-Z]/.test(rest)){nums.forEach(n=>addSticker(rawCode,n,`${rawCode}${n}`));return;}
-     }
-   }
-   const matches=[...line.matchAll(/\b([A-Z]{3})\s*[-:]?\s*(\d{1,2})\b/g)];
-   matches.forEach(m=>addSticker(m[1],m[2],m[0].trim()));
-   const candidateTokens=[...line.matchAll(/\b([A-Z]{3})\s*[-:]?\s*(\d{1,2})\b/g)];
-   if(!candidateTokens.length){
-     const suspicious=[...line.matchAll(/\b[A-Z]{3}\d{0,2}\b/g)].map(m=>m[0]);
-     suspicious.forEach(token=>{
-       const m=token.match(/^([A-Z]{3})(\d{1,2})?$/);
-       if(m&&m[2])addSticker(m[1],m[2],token);
-     });
-   }
- });
- return {found,invalid};
+   if(leading){const rawCode=leading[1],canonical=PANINI_CODE_ALIASES[rawCode]||rawCode;if(PANINI_TEAM_CODES[canonical]){const rest=leading[2],nums=[...rest.matchAll(/\b(\d{1,2})\b/g)].map(m=>m[1]);if(nums.length&&!/[A-Z]/.test(rest)){nums.forEach(n=>addSticker(rawCode,n,`${rawCode}${n}`));return;}}}
+   const matches=[...line.matchAll(/\b([A-Z]{3})\s*[-:]?\s*(\d{1,2})\b/g)];matches.forEach(m=>addSticker(m[1],m[2],m[0].trim()));
+   if(!matches.length)[...line.matchAll(/\b[A-Z]{3}\d{1,2}\b/g)].forEach(m=>{const x=m[0].match(/^([A-Z]{3})(\d{1,2})$/);if(x)addSticker(x[1],x[2],m[0]);});
+ });return {found,invalid};
 }
-
-function groupTradeAnalysis(items){
- const order=currentTeamOrder();
- const groups={};
- items.forEach(item=>(groups[item.team]||=[]).push(item));
- return Object.entries(groups).sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));
+function groupTradeAnalysis(items){const order=currentTeamOrder(),groups={};items.forEach(item=>(groups[item.team]||=[]).push(item));return Object.entries(groups).sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));}
+function escapeTradeHtml(value){return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[char]);}
+function applyTradeAnalyzerSuggestion(raw,replacement){const input=$("#tradeAnalyzerInput");if(!input||!raw||!replacement)return;const escaped=String(raw).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");input.value=input.value.replace(new RegExp(escaped,"i"),replacement);renderTradeAnalyzerResult();}
+function editTradeAnalyzerList(){const dialog=$("#tradeAnalyzerDialog");dialog?.classList.remove("analyzed");$("#tradeAnalyzerEntry").hidden=false;setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),60);}
+function tradeCopyLines(items,includeQuantities=true){return groupTradeAnalysis(items).map(([team,rows])=>`${TEAM_FLAG_EMOJI[team]||""} ${TEAM_TO_PANINI_CODE[team]||team}: ${rows.map(row=>{const units=Object.prototype.hasOwnProperty.call(row,"selectedUnits")?row.selectedUnits:row.available;return includeQuantities&&units>1?`${row.displayCode} x${units}`:row.displayCode;}).join(" ")}`);}
+function chooseBalancedTrade(available,normalNeeded,specialNeeded){
+ const pool=available.filter(x=>!isTradeProtected(x)).sort((a,b)=>b.available-a.available||Number(a.displayCode)-Number(b.displayCode));
+ const take=(category,needed)=>{const selected=[];let left=Math.max(0,Number(needed)||0);for(const item of pool.filter(x=>tradeStickerCategory(x)===category)){if(left<=0)break;const units=Math.min(item.available,left);if(units>0){selected.push({...item,selectedUnits:units});left-=units;}}return {selected,left};};
+ const normals=take("normal",normalNeeded),specials=take("special",specialNeeded);return {items:[...normals.selected,...specials.selected],missingNormal:normals.left,missingSpecial:specials.left};
 }
-
-function escapeTradeHtml(value){
- return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[char]);
+function renderTradeItem(item,kind){
+ const star=isTradeStar(item),protectedItem=isTradeProtected(item),name=tradeStarName(item),category=tradeStickerCategory(item);
+ if(kind!=="available")return `<span class="unavailable">${item.displayCode}</span>`;
+ return `<span class="trade-sticker-pill ${star?"is-star":""} ${protectedItem?"is-protected":""}"><span>${item.displayCode} ×${item.available}</span>${category==="special"?'<b title="Especial">✨</b>':star?`<b title="Estrella">⭐</b>`:""}${name?`<small>${escapeTradeHtml(name)}</small>`:""}<button type="button" data-trade-star="${item.officialCode}|${item.displayCode}" title="Marcar como estrella">${star?"★":"☆"}</button><button type="button" data-trade-protect="${item.officialCode}|${item.displayCode}" title="Proteger">${protectedItem?"🔒":"🔓"}</button></span>`;
 }
-
-function applyTradeAnalyzerSuggestion(raw,replacement){
- const input=$("#tradeAnalyzerInput");
- if(!input||!raw||!replacement)return;
- const escaped=String(raw).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
- input.value=input.value.replace(new RegExp(escaped,"i"),replacement);
- renderTradeAnalyzerResult();
-}
-
-function editTradeAnalyzerList(){
- const dialog=$("#tradeAnalyzerDialog");
- dialog?.classList.remove("analyzed");
- setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),60);
-}
-
 function renderTradeAnalyzerResult(){
- const input=$("#tradeAnalyzerInput");
- const result=$("#tradeAnalyzerResult");
- const dialog=$("#tradeAnalyzerDialog");
- if(!input||!result)return;
- const parsed=parseTradeList(input.value);
- if(!parsed.found.length&&!parsed.invalid.length){
-   dialog?.classList.remove("analyzed");
-   result.hidden=false;
-   result.innerHTML='<div class="trade-analyzer-empty">No se ha encontrado ningún código de cromo. Prueba con formatos como ESP10, KSA15 o JPN 03.</div>';
-   return;
- }
- const target=getTarget();
- const analysed=parsed.found.map(item=>{
-   const owned=Number(inventory?.[item.team]?.[item.internalCode])||0;
-   const available=Math.max(0,owned-target);
-   return {...item,owned,available};
- });
- const available=analysed.filter(item=>item.available>0);
- const unavailable=analysed.filter(item=>item.available<=0);
- const availableUnits=available.reduce((sum,item)=>sum+item.available,0);
- const renderGroups=(items,kind)=>groupTradeAnalysis(items).map(([team,rows])=>`<div class="trade-analyzer-group"><div class="trade-analyzer-group-title"><span>${TEAM_FLAG_EMOJI[team]||""}</span><span>${TEAM_TO_PANINI_CODE[team]||team}</span></div><div class="trade-analyzer-items">${rows.map(row=>kind==="available"?`<span class="available">${row.displayCode} ×${row.available}</span>`:`<span class="unavailable">${row.displayCode}</span>`).join(" · ")}</div></div>`).join("");
- const invalidHtml=parsed.invalid.length?`<section class="trade-analyzer-section"><h3>⚠️ No reconocidos (${parsed.invalid.length})</h3>${parsed.invalid.map((item,index)=>{
-   const numberMatch=String(item.raw).match(/(\d{1,2})/);
-   const replacement=item.suggestion&&numberMatch?`${item.suggestion}${String(numberMatch[1]).padStart(2,"0")}`:"";
-   return `<div class="trade-analyzer-warning"><strong>${escapeTradeHtml(item.raw)}</strong> · ${escapeTradeHtml(item.reason)}${replacement?`<div class="trade-analyzer-suggestion"><span>¿Querías decir <b>${escapeTradeHtml(replacement)}</b>?</span><button type="button" data-trade-suggestion="${index}" data-raw="${escapeTradeHtml(item.raw)}" data-replacement="${escapeTradeHtml(replacement)}">Sí</button></div>`:""}</div>`;
- }).join("")}</section>`:"";
- result.innerHTML=`<button id="editTradeAnalyzerList" class="trade-analyzer-edit" type="button">Editar lista pegada</button><div class="trade-analyzer-summary"><div><strong>${analysed.length}</strong><span>SOLICITADOS</span></div><div><strong>${available.length}</strong><span>DISPONIBLES</span></div><div><strong>${availableUnits}</strong><span>UNIDADES PARA DAR</span></div></div>${available.length?`<section class="trade-analyzer-section"><h3>✅ Puedes entregar</h3>${renderGroups(available,"available")}</section><button id="copyTradeAnalyzerAvailable" class="trade-analyzer-copy" type="button">Copiar disponibles</button>`:'<div class="trade-analyzer-empty">No tienes ninguno de estos cromos por encima de tu objetivo.</div>'}${unavailable.length?`<section class="trade-analyzer-section"><h3>❌ No disponibles (${unavailable.length})</h3>${renderGroups(unavailable,"unavailable")}</section>`:""}${invalidHtml}`;
- result.hidden=false;
- dialog?.classList.add("analyzed");
+ const input=$("#tradeAnalyzerInput"),result=$("#tradeAnalyzerResult"),dialog=$("#tradeAnalyzerDialog");if(!input||!result)return;
+ const parsed=parseTradeList(input.value);if(!parsed.found.length&&!parsed.invalid.length){result.hidden=false;result.innerHTML='<div class="trade-analyzer-empty">No se ha encontrado ningún código de cromo.</div>';return;}
+ const target=getTarget();const analysed=parsed.found.map(item=>{const owned=Number(inventory?.[item.team]?.[item.internalCode])||0;return {...item,owned,available:Math.max(0,owned-target)};});
+ const available=analysed.filter(x=>x.available>0),unavailable=analysed.filter(x=>x.available<=0),availableUnits=available.reduce((s,x)=>s+x.available,0);
+ const normalUnits=available.filter(x=>tradeStickerCategory(x)==="normal").reduce((s,x)=>s+x.available,0),specialUnits=availableUnits-normalUnits;
+ const renderGroups=(items,kind)=>groupTradeAnalysis(items).map(([team,rows])=>`<div class="trade-analyzer-group"><div class="trade-analyzer-group-title"><span>${TEAM_FLAG_EMOJI[team]||""}</span><span>${TEAM_TO_PANINI_CODE[team]||team}</span></div><div class="trade-analyzer-items">${rows.map(row=>renderTradeItem(row,kind)).join(" ")}</div></div>`).join("");
+ const invalidHtml=parsed.invalid.length?`<section class="trade-analyzer-section"><h3>⚠️ No reconocidos (${parsed.invalid.length})</h3>${parsed.invalid.map(item=>{const numberMatch=String(item.raw).match(/(\d{1,2})/),replacement=item.suggestion&&numberMatch?`${item.suggestion}${String(numberMatch[1]).padStart(2,"0")}`:"";return `<div class="trade-analyzer-warning"><strong>${escapeTradeHtml(item.raw)}</strong> · ${escapeTradeHtml(item.reason)}${replacement?`<div class="trade-analyzer-suggestion"><span>¿Querías decir <b>${escapeTradeHtml(replacement)}</b>?</span><button type="button" data-raw="${escapeTradeHtml(item.raw)}" data-replacement="${escapeTradeHtml(replacement)}">Sí</button></div>`:""}</div>`;}).join("")}</section>`:"";
+ result.innerHTML=`<button id="editTradeAnalyzerList" class="trade-analyzer-edit" type="button">← Editar lista pegada</button>
+ <div class="trade-analyzer-summary"><div><strong>${analysed.length}</strong><span>SOLICITADOS</span></div><div><strong>${available.length}</strong><span>DISPONIBLES</span></div><div><strong>${availableUnits}</strong><span>UNIDADES</span></div></div>
+ ${available.length?`<section class="trade-analyzer-section"><h3>✅ Puedes entregar</h3><p class="trade-category-summary">${normalUnits} normales · ${specialUnits} especiales</p>${renderGroups(available,"available")}</section><button id="copyTradeAnalyzerAll" class="trade-analyzer-copy" type="button">Copiar lista completa</button>`:'<div class="trade-analyzer-empty">No tienes ninguno por encima de tu objetivo.</div>'}
+ ${available.length?`<section class="trade-balance-card"><h3>⚖️ Preparar intercambio equilibrado</h3><p>Indica qué vas a recibir. Los escudos y FWC se equilibran como especiales; las fotos de equipo son normales. Las estrellas protegidas no se eligen automáticamente.</p><div class="trade-receive-tabs"><button type="button" class="active" data-receive-mode="list">Pegar lista</button><button type="button" data-receive-mode="counts">Indicar cantidades</button></div><div id="tradeReceiveListPanel"><textarea id="tradeReceiveList" rows="4" placeholder="Pega aquí los cromos que te dará"></textarea></div><div id="tradeReceiveCountsPanel" hidden><label>Normales <input id="tradeReceiveNormalCount" type="number" min="0" value="0" inputmode="numeric"></label><label>Especiales <input id="tradeReceiveSpecialCount" type="number" min="0" value="0" inputmode="numeric"></label></div><button id="generateBalancedTrade" class="trade-analyzer-copy" type="button">Generar lista equilibrada</button><div id="balancedTradeResult"></div></section>`:""}
+ ${unavailable.length?`<section class="trade-analyzer-section"><h3>❌ No disponibles (${unavailable.length})</h3>${renderGroups(unavailable,"unavailable")}</section>`:""}${invalidHtml}`;
+ result.hidden=false;dialog?.classList.add("analyzed");$("#tradeAnalyzerEntry").hidden=true;
  $("#editTradeAnalyzerList")?.addEventListener("click",editTradeAnalyzerList);
- result.querySelectorAll("[data-trade-suggestion]").forEach(button=>button.addEventListener("click",()=>applyTradeAnalyzerSuggestion(button.dataset.raw,button.dataset.replacement)));
- const copyButton=$("#copyTradeAnalyzerAvailable");
- if(copyButton)copyButton.onclick=async()=>{
-   const lines=groupTradeAnalysis(available).map(([team,rows])=>`${TEAM_FLAG_EMOJI[team]||""} ${TEAM_TO_PANINI_CODE[team]||team}: ${rows.map(row=>row.available>1?`${row.displayCode} x${row.available}`:row.displayCode).join(", ")}`);
-   try{await copyShareText(lines.join("\n"));showToast("Disponibles copiados ✓");}catch(error){showToast("No se pudo copiar");}
- };
+ result.querySelectorAll("[data-replacement]").forEach(b=>b.addEventListener("click",()=>applyTradeAnalyzerSuggestion(b.dataset.raw,b.dataset.replacement)));
+ const itemMap=Object.fromEntries(available.map(x=>[tradeStickerKey(x),x]));
+ result.querySelectorAll("[data-trade-star]").forEach(b=>b.addEventListener("click",()=>toggleTradeMark(itemMap[b.dataset.tradeStar],"stars")));
+ result.querySelectorAll("[data-trade-protect]").forEach(b=>b.addEventListener("click",()=>toggleTradeMark(itemMap[b.dataset.tradeProtect],"protected")));
+ $("#copyTradeAnalyzerAll")?.addEventListener("click",async()=>{try{await copyShareText(tradeCopyLines(available).join("\n"));showToast("Lista completa copiada ✓");}catch{showToast("No se pudo copiar");}});
+ result.querySelectorAll("[data-receive-mode]").forEach(btn=>btn.addEventListener("click",()=>{result.querySelectorAll("[data-receive-mode]").forEach(x=>x.classList.toggle("active",x===btn));$("#tradeReceiveListPanel").hidden=btn.dataset.receiveMode!=="list";$("#tradeReceiveCountsPanel").hidden=btn.dataset.receiveMode!=="counts";}));
+ $("#generateBalancedTrade")?.addEventListener("click",()=>{
+   const usingList=!$("#tradeReceiveListPanel").hidden;let normalNeeded=0,specialNeeded=0,invalidCount=0;
+   if(usingList){const received=parseTradeList($("#tradeReceiveList").value);normalNeeded=received.found.filter(x=>tradeStickerCategory(x)==="normal").length;specialNeeded=received.found.length-normalNeeded;invalidCount=received.invalid.length;}else{normalNeeded=Number($("#tradeReceiveNormalCount").value)||0;specialNeeded=Number($("#tradeReceiveSpecialCount").value)||0;}
+   const balanced=chooseBalancedTrade(available,normalNeeded,specialNeeded),box=$("#balancedTradeResult");
+   if(!normalNeeded&&!specialNeeded){box.innerHTML='<div class="trade-analyzer-warning">Indica al menos un cromo que vas a recibir.</div>';return;}
+   const selectedNormal=normalNeeded-balanced.missingNormal,selectedSpecial=specialNeeded-balanced.missingSpecial;
+   box.innerHTML=`<div class="balanced-summary"><strong>Recibes ${normalNeeded+specialNeeded}</strong><span>${normalNeeded} normales · ${specialNeeded} especiales${invalidCount?` · ${invalidCount} no reconocidos`:""}</span><strong>Entregas ${selectedNormal+selectedSpecial}</strong><span>${selectedNormal} normales · ${selectedSpecial} especiales</span></div>${balanced.missingNormal||balanced.missingSpecial?`<div class="trade-analyzer-warning">No hay suficientes cromos sin proteger: faltan ${balanced.missingNormal} normales y ${balanced.missingSpecial} especiales.</div>`:""}${balanced.items.length?`<button id="copyBalancedTrade" class="trade-analyzer-copy" type="button">Copiar intercambio equilibrado</button>`:""}`;
+   $("#copyBalancedTrade")?.addEventListener("click",async()=>{try{await copyShareText(tradeCopyLines(balanced.items,true).join("\n"));showToast("Intercambio copiado ✓");}catch{showToast("No se pudo copiar");}});
+ });
 }
-
-function openTradeAnalyzer(){
- const dialog=$("#tradeAnalyzerDialog");
- if(!dialog)return;
- dialog.classList.remove("analyzed");
- $("#tradeAnalyzerResult").hidden=true;
- dialog.showModal();
- setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),80);
-}
+function openTradeAnalyzer(){const dialog=$("#tradeAnalyzerDialog");if(!dialog)return;dialog.classList.remove("analyzed");$("#tradeAnalyzerEntry").hidden=false;$("#tradeAnalyzerResult").hidden=true;dialog.showModal();setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),80);}
 
 async function shareActiveCollectionList(){
  openShareOptions();
