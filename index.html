@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="World Cup 2026">
-  <title>World Cup 2026 · Build 704.2.1</title>
+  <title>World Cup 2026 · Build 704.3</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="canonical" href="https://mauriv10.github.io/wc26/">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/world-cup-2026-apple-v522.png">
@@ -588,7 +588,7 @@
         <div><strong>Información</strong><small>World Cup 2026</small></div>
       </div>
       <div class="settings-info-list">
-        <div><span>Versión</span><strong>Build 704.2.3 · Estabilidad y feedback</strong></div>
+        <div><span>Versión</span><strong>Build 704.3 · Estabilización y flujo claro</strong></div>
         <div><span>Modo</span><strong>Disponible offline</strong></div>
       </div>
     </section>
@@ -806,25 +806,11 @@
 </dialog>
 
 
-<div id="tradeAnalyzerDialog" class="trade-analyzer-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="tradeAnalyzerTitle">
-  <div class="trade-analyzer-shell">
-    <div class="dialog-header">
-      <div><span class="dialog-kicker">ASISTENTE DE INTERCAMBIO</span><h2 id="tradeAnalyzerTitle">Comparar intercambio</h2></div>
-      <button id="closeTradeAnalyzerDialog" type="button" aria-label="Cerrar">✕</button>
-    </div>
-    <div class="trade-analyzer-scroll">
-      <section id="tradeAnalyzerEntry" class="trade-analyzer-entry">
-        <p class="trade-analyzer-help">Pega los cromos que necesita la otra persona. Admite códigos como <strong>ESP15</strong> y listas compactas por selección.</p>
-        <textarea id="tradeAnalyzerInput" rows="7" placeholder="ESP15, KSA15, JPN03&#10;FRA: 01 07 18"></textarea>
-        <div class="trade-analyzer-actions">
-          <button id="clearTradeAnalyzerButton" type="button" class="secondary">Limpiar</button>
-          <button id="runTradeAnalyzerButton" type="button" class="primary">Analizar lista</button>
-        </div>
-      </section>
-      <section id="tradeAnalyzerResult" class="trade-analyzer-result" hidden></section>
-    </div>
-  </div>
-</div>
+<dialog id="tradeAnalyzerDialog" class="trade-analyzer-dialog">
+  <div class="dialog-header"><div><span class="dialog-kicker">ASISTENTE DE INTERCAMBIO</span><h2 id="tradeAnalyzerTitle">Comparar intercambio</h2></div><button id="closeTradeAnalyzerDialog" type="button" aria-label="Cerrar">✕</button></div>
+  <section id="tradeAnalyzerEntry" class="trade-analyzer-entry"><textarea id="tradeAnalyzerInput" rows="7" placeholder="Pega aquí la lista"></textarea><div class="trade-analyzer-actions"><button id="clearTradeAnalyzerButton" type="button" class="secondary">Limpiar</button><button id="runTradeAnalyzerButton" type="button" class="primary">Analizar</button></div></section>
+  <section id="tradeAnalyzerResult" class="trade-analyzer-result" hidden></section>
+</dialog>
 
 <div id="shareOptionsSheet" class="share-options-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="shareOptionsTitle">
   <button id="shareOptionsBackdrop" class="share-options-backdrop" type="button" aria-label="Cerrar"></button>

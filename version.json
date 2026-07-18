@@ -1,5 +1,7 @@
 {
-  "build": "704.2.3",
+  "build": "704.3",
   "label": "Estabilidad, protección y feedback",
-  "released": "2026-07-18"
+  "released": "2026-07-18",
+  "version": "704.3",
+  "name": "Estabilización y flujo claro"
 }

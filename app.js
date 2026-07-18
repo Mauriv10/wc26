@@ -882,31 +882,6 @@ async function copyShareText(text){
 }
 
 
-function lockViewportForExternalShare(){
- const y=window.scrollY||document.documentElement.scrollTop||0;
- document.body.dataset.shareScrollY=String(y);
- document.body.style.position="fixed";
- document.body.style.top=`-${y}px`;
- document.body.style.left="0";
- document.body.style.right="0";
- document.body.style.width="100%";
- document.body.classList.add("external-share-active");
- return y;
-}
-function unlockViewportAfterExternalShare(y){
- document.body.classList.remove("external-share-active");
- document.body.style.position="";
- document.body.style.top="";
- document.body.style.left="";
- document.body.style.right="";
- document.body.style.width="";
- document.documentElement.style.scrollBehavior="auto";
- document.body.style.scrollBehavior="auto";
- window.scrollTo(0,Number.isFinite(y)?y:Number(document.body.dataset.shareScrollY||0));
- delete document.body.dataset.shareScrollY;
- requestAnimationFrame(()=>window.scrollTo(0,Number.isFinite(y)?y:0));
-}
-
 function actionFeedback(button,{busy="Procesando…",done="Hecho ✓",error="Error"}={}){
  if(!button)return {success(){},fail(){},restore(){}};
  const original=button.dataset.originalLabel||button.textContent;
@@ -932,15 +907,22 @@ async function runShareOption(mode){
  closeShareOptions();
  try{
    if(mode==="share"&&navigator.share){
-     const lockedY=lockViewportForExternalShare();
-     try{await navigator.share({title,text});showToast("Lista compartida ✓");}
-     finally{unlockViewportAfterExternalShare(lockedY);}
+     await navigator.share({title,text});
+     document.documentElement.style.scrollBehavior="auto";
+     document.body.style.scrollBehavior="auto";
+     requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top:window.scrollY,left:0,behavior:"auto"})));
+     showToast("Lista compartida ✓");
      return;
    }
    await copyShareText(text);
    showToast(mode==="compact"?"Lista compacta copiada ✓":"Lista copiada al portapapeles ✓");
  }catch(error){
-   if(error?.name==="AbortError")return;
+   if(error?.name==="AbortError"){
+     document.documentElement.style.scrollBehavior="auto";
+     document.body.style.scrollBehavior="auto";
+     requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top:window.scrollY,left:0,behavior:"auto"})));
+     return;
+   }
    try{
      await copyShareText(text);
      showToast("Lista copiada al portapapeles ✓");
@@ -950,7 +932,6 @@ async function runShareOption(mode){
    }
  }
 }
-
 
 const DEFAULT_TOP_STARS={
  "ESP|15":"Lamine Yamal","ENG|11":"Jude Bellingham","ENG|18":"Harry Kane",
@@ -1042,69 +1023,17 @@ function parseTradeList(rawText){
 function groupTradeAnalysis(items){const order=currentTeamOrder(),groups={};items.forEach(item=>(groups[item.team]||=[]).push(item));return Object.entries(groups).sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));}
 function escapeTradeHtml(value){return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[char]);}
 function applyTradeAnalyzerSuggestion(raw,replacement){const input=$("#tradeAnalyzerInput");if(!input||!raw||!replacement)return;const escaped=String(raw).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");input.value=input.value.replace(new RegExp(escaped,"i"),replacement);renderTradeAnalyzerResult();}
-function editTradeAnalyzerList(){const dialog=$("#tradeAnalyzerDialog");dialog?.classList.remove("analyzed");$("#tradeAnalyzerEntry").hidden=false;setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),60);}
+function editTradeAnalyzerList(){const dialog=$("#tradeAnalyzerDialog");dialog?.classList.remove("analyzed","exchange-step");$("#tradeAnalyzerEntry").hidden=false;$("#tradeAnalyzerResult").hidden=true;setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),60);}
 function tradeCopyLines(items,includeQuantities=true){return groupTradeAnalysis(items).map(([team,rows])=>`${TEAM_FLAG_EMOJI[team]||""} ${TEAM_TO_PANINI_CODE[team]||team}: ${rows.map(row=>{const units=Object.prototype.hasOwnProperty.call(row,"selectedUnits")?row.selectedUnits:row.available;return includeQuantities&&units>1?`${row.displayCode} x${units}`:row.displayCode;}).join(" ")}`);}
-function chooseBalancedTrade(available,normalNeeded,specialNeeded,allowDuplicates=false){
- const pool=available.filter(x=>!isTradeProtected(x)).sort((a,b)=>b.available-a.available||currentTeamOrder().indexOf(a.team)-currentTeamOrder().indexOf(b.team)||Number(a.displayCode)-Number(b.displayCode));
- const take=(category,needed)=>{
-   const candidates=pool.filter(x=>tradeStickerCategory(x)===category),selected=[];let left=Math.max(0,Number(needed)||0);
-   for(const item of candidates){if(left<=0)break;selected.push({...item,selectedUnits:1});left--;}
-   if(allowDuplicates&&left>0){
-     let pass=2;
-     while(left>0){let added=false;for(const item of candidates){if(left<=0)break;if(item.available>=pass){const row=selected.find(x=>tradeStickerKey(x)===tradeStickerKey(item));row.selectedUnits++;left--;added=true;}}if(!added)break;pass++;}
-   }
-   return {selected,left};
- };
- const normals=take("normal",normalNeeded),specials=take("special",specialNeeded);
- return {items:[...normals.selected,...specials.selected],missingNormal:normals.left,missingSpecial:specials.left,allowDuplicates};
-}
-function renderBalancedTrade(box,available,normalNeeded,specialNeeded,allowDuplicates=null,invalidCount=0){
- const balanced=chooseBalancedTrade(available,normalNeeded,specialNeeded,allowDuplicates===true);
- const delivered=balanced.items.reduce((sum,item)=>sum+(item.selectedUnits||1),0);
- const repeated=balanced.items.reduce((sum,item)=>sum+Math.max(0,(item.selectedUnits||1)-1),0);
- const short=balanced.missingNormal+balanced.missingSpecial;
- box.innerHTML=`<div class="balanced-summary"><strong>${delivered} cromos para entregar</strong><span>${balanced.items.length} diferentes${repeated?` · ${repeated} repetidos`:""}${invalidCount?` · ${invalidCount} no reconocidos`:""}</span></div>${short&&allowDuplicates===null?`<div class="trade-balance-choice"><strong>Faltan ${short} para igualar.</strong><span>¿Quieres completar con cartas iguales?</span><div><button type="button" data-balance-choice="different">Solo diferentes</button><button type="button" class="primary" data-balance-choice="duplicates">Añadir iguales</button></div></div>`:short?`<div class="trade-analyzer-warning">No hay más cromos disponibles para completar los ${short} restantes.</div>`:""}${balanced.items.length?`<button id="copyBalancedTrade" class="trade-analyzer-copy" type="button">Copiar intercambio</button>`:""}`;
- box.querySelector('[data-balance-choice="different"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,false,invalidCount));
- box.querySelector('[data-balance-choice="duplicates"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,true,invalidCount));
- $("#copyBalancedTrade")?.addEventListener("click",async event=>{const fb=actionFeedback(event.currentTarget,{busy:"Copiando…",done:"Intercambio copiado ✓"});try{await copyShareText(tradeCopyLines(balanced.items,true).join("\n"));fb.success();showToast("Intercambio copiado ✓");}catch{fb.fail("No se pudo copiar");showToast("No se pudo copiar");}});
-}
-function renderTradeItem(item,kind){
- const star=isTradeStar(item),protectedItem=isTradeProtected(item),name=tradeStarName(item),category=tradeStickerCategory(item);
- if(kind!=="available")return `<span class="unavailable">${item.displayCode}</span>`;
- return `<span class="trade-sticker-pill ${star?"is-star":""} ${protectedItem?"is-protected":""}"><span>${item.displayCode} ×${item.available}</span>${category==="special"?'<b title="Especial">✨</b>':star?`<b title="Estrella">⭐</b>`:""}${name?`<small>${escapeTradeHtml(name)}</small>`:""}<button type="button" data-trade-star="${item.officialCode}|${item.displayCode}" title="Marcar como estrella">${star?"★":"☆"}</button><button type="button" data-trade-protect="${item.officialCode}|${item.displayCode}" title="Proteger">${protectedItem?"🔒":"🔓"}</button></span>`;
-}
-function renderTradeAnalyzerResult(){
- const input=$("#tradeAnalyzerInput"),result=$("#tradeAnalyzerResult"),dialog=$("#tradeAnalyzerDialog");if(!input||!result)return;
- const parsed=parseTradeList(input.value);if(!parsed.found.length&&!parsed.invalid.length){result.hidden=false;result.innerHTML='<div class="trade-analyzer-empty">No se ha encontrado ningún código de cromo.</div>';return;}
- const target=getTarget();const analysed=parsed.found.map(item=>{const owned=Number(inventory?.[item.team]?.[item.internalCode])||0;return {...item,owned,available:Math.max(0,owned-target)};});
- const available=analysed.filter(x=>x.available>0),unavailable=analysed.filter(x=>x.available<=0),availableUnits=available.reduce((s,x)=>s+x.available,0);
- const normalUnits=available.filter(x=>tradeStickerCategory(x)==="normal").reduce((s,x)=>s+x.available,0),specialUnits=availableUnits-normalUnits;
- const renderGroups=(items,kind)=>groupTradeAnalysis(items).map(([team,rows])=>`<div class="trade-analyzer-group"><div class="trade-analyzer-group-title"><span>${TEAM_FLAG_EMOJI[team]||""}</span><span>${TEAM_TO_PANINI_CODE[team]||team}</span></div><div class="trade-analyzer-items">${rows.map(row=>renderTradeItem(row,kind)).join(" ")}</div></div>`).join("");
- const invalidHtml=parsed.invalid.length?`<section class="trade-analyzer-section"><h3>⚠️ No reconocidos (${parsed.invalid.length})</h3>${parsed.invalid.map(item=>{const numberMatch=String(item.raw).match(/(\d{1,2})/),replacement=item.suggestion&&numberMatch?`${item.suggestion}${String(numberMatch[1]).padStart(2,"0")}`:"";return `<div class="trade-analyzer-warning"><strong>${escapeTradeHtml(item.raw)}</strong> · ${escapeTradeHtml(item.reason)}${replacement?`<div class="trade-analyzer-suggestion"><span>¿Querías decir <b>${escapeTradeHtml(replacement)}</b>?</span><button type="button" data-raw="${escapeTradeHtml(item.raw)}" data-replacement="${escapeTradeHtml(replacement)}">Sí</button></div>`:""}</div>`;}).join("")}</section>`:"";
- result.innerHTML=`<button id="editTradeAnalyzerList" class="trade-analyzer-edit" type="button">← Editar lista pegada</button>
- <div class="trade-analyzer-summary"><div><strong>${analysed.length}</strong><span>SOLICITADOS</span></div><div><strong>${available.length}</strong><span>DISPONIBLES</span></div><div><strong>${availableUnits}</strong><span>UNIDADES</span></div></div>
- ${available.length?`<section class="trade-analyzer-section"><h3>✅ Puedes entregar</h3><p class="trade-category-summary">${normalUnits} normales · ${specialUnits} especiales</p>${renderGroups(available,"available")}</section><button id="copyTradeAnalyzerAll" class="trade-analyzer-copy" type="button">Copiar lista completa</button>`:'<div class="trade-analyzer-empty">No tienes ninguno por encima de tu objetivo.</div>'}
- ${available.length?`<section class="trade-balance-card"><h3>⚖️ Preparar intercambio equilibrado</h3><p>Indica qué vas a recibir. Los escudos y FWC se equilibran como especiales; las fotos de equipo son normales. Las estrellas protegidas no se eligen automáticamente.</p><div class="trade-receive-tabs"><button type="button" class="active" data-receive-mode="list">Pegar lista</button><button type="button" data-receive-mode="counts">Indicar cantidades</button></div><div id="tradeReceiveListPanel"><textarea id="tradeReceiveList" rows="4" placeholder="Pega aquí los cromos que te dará"></textarea></div><div id="tradeReceiveCountsPanel" hidden><label>Normales <input id="tradeReceiveNormalCount" type="number" min="0" value="0" inputmode="numeric"></label><label>Especiales <input id="tradeReceiveSpecialCount" type="number" min="0" value="0" inputmode="numeric"></label></div><button id="generateBalancedTrade" class="trade-analyzer-copy" type="button">Generar lista equilibrada</button><div id="balancedTradeResult"></div></section>`:""}
- ${unavailable.length?`<section class="trade-analyzer-section"><h3>❌ No disponibles (${unavailable.length})</h3>${renderGroups(unavailable,"unavailable")}</section>`:""}${invalidHtml}`;
- result.hidden=false;dialog?.classList.add("analyzed");$("#tradeAnalyzerEntry").hidden=true;
- $("#editTradeAnalyzerList")?.addEventListener("click",editTradeAnalyzerList);
- result.querySelectorAll("[data-replacement]").forEach(b=>b.addEventListener("click",()=>applyTradeAnalyzerSuggestion(b.dataset.raw,b.dataset.replacement)));
- const itemMap=Object.fromEntries(available.map(x=>[tradeStickerKey(x),x]));
- result.querySelectorAll("[data-trade-star]").forEach(b=>b.addEventListener("click",()=>toggleTradeMark(itemMap[b.dataset.tradeStar],"stars")));
- result.querySelectorAll("[data-trade-protect]").forEach(b=>b.addEventListener("click",()=>toggleTradeMark(itemMap[b.dataset.tradeProtect],"protected")));
- $("#copyTradeAnalyzerAll")?.addEventListener("click",async event=>{const fb=actionFeedback(event.currentTarget,{busy:"Copiando…",done:"Lista copiada ✓"});const safeAvailable=available.filter(item=>!isTradeStar(item)&&!isTradeProtected(item));try{if(!safeAvailable.length)throw new Error("No hay cromos sin proteger");await copyShareText(tradeCopyLines(safeAvailable).join("\n"));fb.success();showToast("Lista copiada sin estrellas ni protegidos ✓");}catch(error){fb.fail("No se pudo copiar");showToast(error.message||"No se pudo copiar");}});
- result.querySelectorAll("[data-receive-mode]").forEach(btn=>btn.addEventListener("click",()=>{result.querySelectorAll("[data-receive-mode]").forEach(x=>x.classList.toggle("active",x===btn));$("#tradeReceiveListPanel").hidden=btn.dataset.receiveMode!=="list";$("#tradeReceiveCountsPanel").hidden=btn.dataset.receiveMode!=="counts";}));
- $("#generateBalancedTrade")?.addEventListener("click",event=>{
-   const fb=actionFeedback(event.currentTarget,{busy:"Generando…",done:"Lista generada ✓"});
-   const usingList=!$("#tradeReceiveListPanel").hidden;let normalNeeded=0,specialNeeded=0,invalidCount=0;
-   if(usingList){const received=parseTradeList($("#tradeReceiveList").value);normalNeeded=received.found.filter(x=>tradeStickerCategory(x)==="normal").length;specialNeeded=received.found.length-normalNeeded;invalidCount=received.invalid.length;}else{normalNeeded=Number($("#tradeReceiveNormalCount").value)||0;specialNeeded=Number($("#tradeReceiveSpecialCount").value)||0;}
-   const box=$("#balancedTradeResult");
-   if(!normalNeeded&&!specialNeeded){box.innerHTML='<div class="trade-analyzer-warning">Indica al menos un cromo que vas a recibir.</div>';fb.fail("Falta la lista");return;}
-   renderBalancedTrade(box,available,normalNeeded,specialNeeded,null,invalidCount);fb.success();
- });
-}
-function openTradeAnalyzer(){const dialog=$("#tradeAnalyzerDialog");if(!dialog)return;dialog.classList.remove("analyzed");$("#tradeAnalyzerEntry").hidden=false;$("#tradeAnalyzerResult").hidden=true;dialog.hidden=false;document.body.classList.add("trade-analyzer-open");setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),80);}
-function closeTradeAnalyzer(){const dialog=$("#tradeAnalyzerDialog");if(!dialog)return;dialog.hidden=true;document.body.classList.remove("trade-analyzer-open");}
+function chooseBalancedTrade(available,normalNeeded,specialNeeded,allowDuplicates=false){const pool=available.filter(x=>!isTradeProtected(x)&&!isTradeStar(x)).sort((a,b)=>b.available-a.available||currentTeamOrder().indexOf(a.team)-currentTeamOrder().indexOf(b.team)||Number(a.displayCode)-Number(b.displayCode));const take=(category,needed)=>{const candidates=pool.filter(x=>tradeStickerCategory(x)===category),selected=[];let left=Math.max(0,Number(needed)||0);for(const item of candidates){if(left<=0)break;selected.push({...item,selectedUnits:1});left--;}if(allowDuplicates&&left>0){let pass=2;while(left>0){let added=false;for(const item of candidates){if(left<=0)break;if(item.available>=pass){selected.find(x=>tradeStickerKey(x)===tradeStickerKey(item)).selectedUnits++;left--;added=true;}}if(!added)break;pass++;}}return {selected,left};};const normals=take("normal",normalNeeded),specials=take("special",specialNeeded);return {items:[...normals.selected,...specials.selected],missingNormal:normals.left,missingSpecial:specials.left};}
+function renderInvalidLines(items){if(!items.length)return "";return `<div class="trade-review-list">${items.map(item=>{const numberMatch=String(item.raw).match(/(\d{1,2})/),replacement=item.suggestion&&numberMatch?`${item.suggestion}${String(numberMatch[1]).padStart(2,"0")}`:"";return `<div class="trade-review-item"><div><strong>${escapeTradeHtml(item.raw)}</strong><small>${escapeTradeHtml(item.reason)}</small></div>${replacement?`<button type="button" data-raw="${escapeTradeHtml(item.raw)}" data-replacement="${escapeTradeHtml(replacement)}">Corregir</button>`:""}</div>`;}).join("")}</div>`;}
+function wireInvalidCorrections(root){root.querySelectorAll("[data-replacement]").forEach(b=>b.addEventListener("click",()=>applyTradeAnalyzerSuggestion(b.dataset.raw,b.dataset.replacement)));}
+function renderBalancedTrade(box,available,normalNeeded,specialNeeded,allowDuplicates=null){const balanced=chooseBalancedTrade(available,normalNeeded,specialNeeded,allowDuplicates===true),delivered=balanced.items.reduce((s,x)=>s+(x.selectedUnits||1),0),short=balanced.missingNormal+balanced.missingSpecial;box.innerHTML=`<div class="trade-clean-status"><strong>${delivered} cromos para entregar</strong></div>${short&&allowDuplicates===null?`<div class="trade-clean-choice"><span>Solo hay ${delivered} cromos diferentes.</span><button type="button" data-balance-choice="different">Usar solo diferentes</button><button type="button" class="primary" data-balance-choice="duplicates">Completar con iguales</button></div>`:short?`<p class="trade-clean-note">No hay suficientes cromos para completar ${short} unidades.</p>`:""}${balanced.items.length?`<button id="copyBalancedTrade" class="primary trade-main-action" type="button">Copiar intercambio</button>`:""}`;box.querySelector('[data-balance-choice="different"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,false));box.querySelector('[data-balance-choice="duplicates"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,true));$("#copyBalancedTrade")?.addEventListener("click",async event=>{const fb=actionFeedback(event.currentTarget,{busy:"Copiando…",done:"Copiado ✓"});try{await copyShareText(tradeCopyLines(balanced.items,true).join("\n"));fb.success();}catch{fb.fail("Error");}});}
+function renderExchangeStep(available){const result=$("#tradeAnalyzerResult"),dialog=$("#tradeAnalyzerDialog");dialog?.classList.add("exchange-step");result.innerHTML=`<button id="backToTradeSummary" class="trade-back-button" type="button">← Volver</button><div class="trade-clean-card"><h3>¿Qué vas a recibir?</h3><div class="trade-receive-tabs"><button type="button" class="active" data-receive-mode="list">Pegar lista</button><button type="button" data-receive-mode="counts">Cantidades</button></div><div id="tradeReceiveListPanel"><textarea id="tradeReceiveList" rows="6" placeholder="Pega la lista que te entregan"></textarea></div><div id="tradeReceiveCountsPanel" hidden><label>Normales <input id="tradeReceiveNormalCount" type="number" min="0" value="0" inputmode="numeric"></label><label>Especiales <input id="tradeReceiveSpecialCount" type="number" min="0" value="0" inputmode="numeric"></label></div><button id="generateBalancedTrade" class="primary trade-main-action" type="button">Generar intercambio</button><div id="receivedListErrors"></div><div id="balancedTradeResult"></div></div>`;$("#backToTradeSummary")?.addEventListener("click",renderTradeAnalyzerResult);result.querySelectorAll("[data-receive-mode]").forEach(btn=>btn.addEventListener("click",()=>{result.querySelectorAll("[data-receive-mode]").forEach(x=>x.classList.toggle("active",x===btn));$("#tradeReceiveListPanel").hidden=btn.dataset.receiveMode!=="list";$("#tradeReceiveCountsPanel").hidden=btn.dataset.receiveMode!=="counts";$("#receivedListErrors").innerHTML="";$("#balancedTradeResult").innerHTML="";}));$("#generateBalancedTrade")?.addEventListener("click",event=>{const fb=actionFeedback(event.currentTarget,{busy:"Generando…",done:"Generado ✓"});let normalNeeded=0,specialNeeded=0;const errors=$("#receivedListErrors");if(!$("#tradeReceiveListPanel").hidden){const received=parseTradeList($("#tradeReceiveList").value);if(received.invalid.length){errors.innerHTML=`<div class="trade-inline-alert"><strong>${received.invalid.length} líneas necesitan revisión</strong>${renderInvalidLines(received.invalid)}</div>`;wireInvalidCorrections(errors);$("#balancedTradeResult").innerHTML="";fb.fail("Revisar lista");return;}normalNeeded=received.found.filter(x=>tradeStickerCategory(x)==="normal").length;specialNeeded=received.found.length-normalNeeded;}else{normalNeeded=Number($("#tradeReceiveNormalCount").value)||0;specialNeeded=Number($("#tradeReceiveSpecialCount").value)||0;}errors.innerHTML="";if(!normalNeeded&&!specialNeeded){fb.fail("Falta la lista");return;}renderBalancedTrade($("#balancedTradeResult"),available,normalNeeded,specialNeeded,null);fb.success();});}
+function renderTradeAnalyzerResult(){const input=$("#tradeAnalyzerInput"),result=$("#tradeAnalyzerResult"),dialog=$("#tradeAnalyzerDialog");if(!input||!result)return;const parsed=parseTradeList(input.value);if(!parsed.found.length&&!parsed.invalid.length){result.hidden=false;result.innerHTML='<div class="trade-inline-alert">No se ha reconocido ningún cromo.</div>';return;}const target=getTarget(),analysed=parsed.found.map(item=>{const owned=Number(inventory?.[item.team]?.[item.internalCode])||0;return {...item,owned,available:Math.max(0,owned-target)};}),available=analysed.filter(x=>x.available>0),safeAvailable=available.filter(x=>!isTradeStar(x)&&!isTradeProtected(x));result.innerHTML=`<button id="editTradeAnalyzerList" class="trade-back-button" type="button">← Editar lista</button><div class="trade-clean-card"><div class="trade-clean-status"><strong>${analysed.length} cromos detectados</strong>${parsed.invalid.length?`<span>${parsed.invalid.length} líneas necesitan revisión</span>`:""}</div>${parsed.invalid.length?`<div class="trade-inline-alert">${renderInvalidLines(parsed.invalid)}</div>`:""}<button id="copyTradeAnalyzerAll" class="primary trade-main-action" type="button" ${safeAvailable.length?"":"disabled"}>Copiar lista disponible</button><button id="prepareBalancedTrade" class="secondary trade-main-action" type="button" ${safeAvailable.length?"":"disabled"}>Preparar intercambio</button></div>`;result.hidden=false;dialog?.classList.add("analyzed");dialog?.classList.remove("exchange-step");$("#tradeAnalyzerEntry").hidden=true;$("#editTradeAnalyzerList")?.addEventListener("click",editTradeAnalyzerList);wireInvalidCorrections(result);$("#copyTradeAnalyzerAll")?.addEventListener("click",async event=>{const fb=actionFeedback(event.currentTarget,{busy:"Copiando…",done:"Copiado ✓"});try{await copyShareText(tradeCopyLines(safeAvailable).join("\n"));fb.success();}catch{fb.fail("Error");}});$("#prepareBalancedTrade")?.addEventListener("click",()=>renderExchangeStep(safeAvailable));}
+function openTradeAnalyzer(){const dialog=$("#tradeAnalyzerDialog");if(!dialog)return;dialog.classList.remove("analyzed","exchange-step");$("#tradeAnalyzerEntry").hidden=false;$("#tradeAnalyzerResult").hidden=true;if(!dialog.open)dialog.showModal();setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),80);}
+function closeTradeAnalyzer(){const dialog=$("#tradeAnalyzerDialog");if(dialog?.open)dialog.close();}
+
 
 async function shareActiveCollectionList(){
  openShareOptions();
@@ -2318,19 +2247,8 @@ $("#markSyncedButton").onclick=()=>{
 };
 
 
-function renderTradeProtectionSettings(){
- const root=$("#tradeProtectionSettings");if(!root)return;
- const prefs=currentTradePreferences();
- const customStars=Object.keys(prefs.stars||{});const customProtected=Object.keys(prefs.protected||{});
- const defaults=Object.keys(DEFAULT_TOP_STARS);
- const chips=[...new Set([...defaults,...customStars,...customProtected])].map(key=>{
-   const [code,num]=key.split("|");const label=DEFAULT_TOP_STARS[key]||`${code}${num}`;
-   const tags=[defaults.includes(key)?"TOP":"",customStars.includes(key)?"Estrella":"",customProtected.includes(key)?"Protegido":""].filter(Boolean).join(" · ");
-   return `<span class="trade-setting-chip"><strong>${escapeTradeHtml(label)}</strong><small>${escapeTradeHtml(code+num)} · ${tags}</small></span>`;
- }).join("");
- root.innerHTML=`<p>Las listas copiadas y los intercambios automáticos excluyen estos cromos.</p><div class="trade-setting-chips">${chips||'<span class="trade-settings-empty">Sin marcas personalizadas.</span>'}</div>${customStars.length||customProtected.length?'<button id="resetCustomTradeMarks" type="button">Quitar marcas personalizadas</button>':""}`;
- $("#resetCustomTradeMarks")?.addEventListener("click",event=>{const fb=actionFeedback(event.currentTarget,{busy:"Restableciendo…",done:"Restablecido ✓"});prefs.stars={};prefs.protected={};persistProjects();renderTradeProtectionSettings();fb.success();showToast("Marcas personalizadas eliminadas");});
-}
+function renderTradeProtectionSettings(){const root=$("#tradeProtectionSettings");if(!root)return;const prefs=currentTradePreferences(),customStars=Object.keys(prefs.stars||{}),customProtected=Object.keys(prefs.protected||{}),defaults=Object.keys(DEFAULT_TOP_STARS),total=new Set([...defaults,...customStars,...customProtected]).size;root.innerHTML=`<button id="manageTradeProtection" class="trade-settings-row" type="button"><span><strong>Protegidos para intercambios</strong><small>${total} cromos excluidos</small></span><b>Gestionar ›</b></button><div id="tradeProtectionDetails" hidden></div>`;$("#manageTradeProtection")?.addEventListener("click",()=>{const details=$("#tradeProtectionDetails"),opening=details.hidden;details.hidden=!opening;if(!opening)return;const chips=[...new Set([...defaults,...customStars,...customProtected])].map(key=>{const [code,num]=key.split("|"),label=DEFAULT_TOP_STARS[key]||`${code}${num}`;return `<span class="trade-setting-chip"><strong>${escapeTradeHtml(label)}</strong><small>${escapeTradeHtml(code+num)}</small></span>`;}).join("");details.innerHTML=`<div class="trade-setting-chips">${chips}</div>${customStars.length||customProtected.length?'<button id="resetCustomTradeMarks" type="button">Quitar marcas personalizadas</button>':""}`;$("#resetCustomTradeMarks")?.addEventListener("click",()=>{prefs.stars={};prefs.protected={};persistProjects();renderTradeProtectionSettings();showToast("Marcas personalizadas eliminadas");});});}
+
 
 function setupSettingsCenter(){
  const dialog=$("#settingsDialog");

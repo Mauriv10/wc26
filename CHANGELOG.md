@@ -1,3 +1,12 @@
+# Build 704.3
+
+- Recuperada la estrategia estable de compartir de la 704.1.1, sin bloquear ni reposicionar el body.
+- Asistente separado por pasos: análisis, revisión de errores e intercambio.
+- Los no reconocidos aparecen justo donde se generan.
+- Eliminadas las listas largas de no disponibles del flujo principal.
+- Ajustes de protecciones resumidos con una vista Gestionar.
+- Se mantienen parser bilingüe, intercambio equilibrado, estrellas/protegidos y feedback.
+
 # Build 704.2.3
 
 - Bloqueo/restauración del viewport durante compartir en iOS.
