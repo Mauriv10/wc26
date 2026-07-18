@@ -1,3 +1,9 @@
+## Build 704.2.1
+- Parser bilingüe para nombres de selecciones en castellano e inglés.
+- Guiones interpretados como separadores (4-17 = 4 y 17), no como rangos.
+- Soporte para comas, espacios y abreviaturas mezcladas.
+- Refuerzo global para impedir scroll suave en iOS antes y después de compartir.
+
 # Build 704.2 — Asistente inteligente de intercambio
 
 - Analizador de listas convertido en pantalla completa.

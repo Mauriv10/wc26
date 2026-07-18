@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.2";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.2.1";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -756,6 +756,26 @@ const PANINI_TEAM_CODES={
 const TEAM_TO_PANINI_CODE=Object.fromEntries(Object.entries(PANINI_TEAM_CODES).map(([code,team])=>[team,code]));
 const PANINI_CODE_ALIASES={JAP:"JPN",SAU:"KSA",NLD:"NED",HOL:"NED",KOR:"KOR",RDC:"COD",DRC:"COD",BOS:"BIH",CZR:"CZE",CRC:"CUW"};
 
+// Nombres admitidos para listas copiadas desde WhatsApp, en castellano e inglés.
+const PANINI_TEAM_NAME_ALIASES={
+ FWC:["fwc","fifa world cup","mundial"],
+ MEX:["mexico","méxico"],RSA:["south africa","sudafrica","sudáfrica"],KOR:["south korea","korea republic","corea del sur","corea"],CZE:["czechia","czech republic","chequia","republica checa","república checa"],
+ CAN:["canada","canadá"],BIH:["bosnia and herzegovina","bosnia-herzegovina","bosnia y herzegovina","bosnia"],QAT:["qatar","catar"],SUI:["switzerland","suiza"],
+ BRA:["brazil","brasil"],MAR:["morocco","marruecos","morroco","marocco"],HAI:["haiti","haití"],SCO:["scotland","escocia"],
+ USA:["united states","usa","estados unidos","eeuu","estados unidos de america"],PAR:["paraguay"],AUS:["australia"],TUR:["turkey","turkiye","türkiye","turquia","turquía"],
+ GER:["germany","alemania"],CUW:["curacao","curaçao","curazao","curazao"],CIV:["ivory coast","cote d ivoire","côte d'ivoire","costa de marfil"],ECU:["ecuador"],
+ NED:["netherlands","holland","paises bajos","países bajos","holanda"],JPN:["japan","japon","japón"],SWE:["sweden","suecia"],TUN:["tunisia","tunez","túnez"],
+ BEL:["belgium","belgica","bélgica"],EGY:["egypt","egipto"],IRN:["iran","irán"],NZL:["new zealand","nueva zelanda"],
+ ESP:["spain","espana","españa"],CPV:["cape verde","cabo verde"],KSA:["saudi arabia","arabia saudita","arabia saudi"],URU:["uruguay"],
+ FRA:["france","francia"],SEN:["senegal"],IRQ:["iraq","irak"],NOR:["norway","noruega"],
+ ARG:["argentina"],ALG:["algeria","argelia"],AUT:["austria"],JOR:["jordan","jordania"],
+ POR:["portugal"],COD:["dr congo","d r congo","democratic republic of congo","rd congo","republica democratica del congo","república democrática del congo","congo"],UZB:["uzbekistan","uzbekistán"],COL:["colombia"],
+ ENG:["england","inglaterra"],CRO:["croatia","croacia"],GHA:["ghana"],PAN:["panama","panamá"]
+};
+function normalizeTradeName(value){return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();}
+const PANINI_NORMALIZED_NAME_TO_CODE=(()=>{const map={};Object.keys(PANINI_TEAM_CODES).forEach(code=>{map[normalizeTradeName(code)]=code;});Object.entries(PANINI_TEAM_NAME_ALIASES).forEach(([code,names])=>names.forEach(name=>map[normalizeTradeName(name)]=code));return map;})();
+const PANINI_SORTED_NAME_ALIASES=Object.keys(PANINI_NORMALIZED_NAME_TO_CODE).sort((a,b)=>b.length-a.length);
+
 function paniniDisplayCode(team,internalCode){
  const n=Number(internalCode);
  return team==="FWC"?String(Math.max(0,n-1)).padStart(2,"0"):String(n).padStart(2,"0");
@@ -861,6 +881,14 @@ async function copyShareText(text){
  if(!copied)throw new Error("No se pudo copiar la lista");
 }
 
+function enforceInstantScrolling(){
+ document.documentElement.style.setProperty("scroll-behavior","auto","important");
+ document.body.style.setProperty("scroll-behavior","auto","important");
+ document.querySelectorAll(".trade-analyzer-scroll,.share-options-sheet,.dialog-content").forEach(node=>node.style.setProperty("scroll-behavior","auto","important"));
+}
+window.addEventListener("pageshow",enforceInstantScrolling);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)enforceInstantScrolling();});
+
 async function runShareOption(mode){
  const type=$("#shareOptionsSheet")?.dataset.type||activeShareListType();
  if(!type)return;
@@ -875,7 +903,9 @@ async function runShareOption(mode){
  closeShareOptions();
  try{
    if(mode==="share"&&navigator.share){
+     enforceInstantScrolling();
      await navigator.share({title,text});
+     enforceInstantScrolling();
      document.documentElement.style.scrollBehavior="auto";
      document.body.style.scrollBehavior="auto";
      requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top:window.scrollY,left:0,behavior:"auto"})));
@@ -940,22 +970,54 @@ function suggestPaniniCode(rawCode){
  const best=Object.keys(PANINI_TEAM_CODES).map(candidate=>({candidate,d:levenshteinDistance(code,candidate)})).sort((a,b)=>a.d-b.d)[0];
  return best&&best.d<=1?best.candidate:null;
 }
+function suggestPaniniTeamName(rawName){
+ const normalized=normalizeTradeName(rawName);if(!normalized)return null;
+ const best=PANINI_SORTED_NAME_ALIASES.map(alias=>({alias,d:levenshteinDistance(normalized,alias)})).sort((a,b)=>a.d-b.d||a.alias.length-b.alias.length)[0];
+ const limit=normalized.length<=5?1:Math.max(2,Math.floor(normalized.length*.22));
+ return best&&best.d<=limit?PANINI_NORMALIZED_NAME_TO_CODE[best.alias]:null;
+}
 function parseTradeList(rawText){
  const found=[],invalid=[],seen=new Set(),invalidSeen=new Set();
  const addInvalid=(raw,reason,suggestion="")=>{const key=`${raw}|${reason}`;if(!raw||invalidSeen.has(key))return;invalidSeen.add(key);invalid.push({raw,reason,suggestion});};
  const addSticker=(rawCode,number,rawToken)=>{
    let code=String(rawCode||"").toUpperCase();code=PANINI_CODE_ALIASES[code]||code;const team=PANINI_TEAM_CODES[code];
-   if(!team){addInvalid(rawToken||`${rawCode}${number}`,"Código de selección no reconocido",suggestPaniniCode(rawCode)||"");return;}
+   if(!team){addInvalid(rawToken||`${rawCode}${number}`,"Selección no reconocida",suggestPaniniCode(rawCode)||suggestPaniniTeamName(rawCode)||"");return;}
    const internalCode=paniniInternalCode(team,number);if(!internalCode){addInvalid(rawToken||`${code}${number}`,team==="FWC"?"FWC admite números del 00 al 19":"El número debe estar entre 01 y 20");return;}
    const key=`${team}|${internalCode}`;if(seen.has(key))return;seen.add(key);found.push({team,officialCode:code,internalCode,displayCode:paniniDisplayCode(team,internalCode)});
  };
  String(rawText||"").replace(/\r/g,"").split("\n").forEach(originalLine=>{
-   const line=originalLine.toUpperCase().replace(/[×X]\s*\d+/g,"").replace(/[：]/g,":");if(!line.trim())return;
-   const leading=line.match(/(?:^|\s)([A-Z]{3})\s*[:\-]?\s*(.*)$/);
-   if(leading){const rawCode=leading[1],canonical=PANINI_CODE_ALIASES[rawCode]||rawCode;if(PANINI_TEAM_CODES[canonical]){const rest=leading[2],nums=[...rest.matchAll(/\b(\d{1,2})\b/g)].map(m=>m[1]);if(nums.length&&!/[A-Z]/.test(rest)){nums.forEach(n=>addSticker(rawCode,n,`${rawCode}${n}`));return;}}}
-   const matches=[...line.matchAll(/\b([A-Z]{3})\s*[-:]?\s*(\d{1,2})\b/g)];matches.forEach(m=>addSticker(m[1],m[2],m[0].trim()));
-   if(!matches.length)[...line.matchAll(/\b[A-Z]{3}\d{1,2}\b/g)].forEach(m=>{const x=m[0].match(/^([A-Z]{3})(\d{1,2})$/);if(x)addSticker(x[1],x[2],m[0]);});
- });return {found,invalid};
+   const clean=originalLine.replace(/[×xX]\s*\d+/g,"").replace(/[：]/g,":").trim();if(!clean)return;
+
+   // Formato compacto con uno o varios códigos: ESP15, ESP 15, KSA01...
+   const compactMatches=[...clean.toUpperCase().matchAll(/(?:^|[^A-Z])([A-Z]{3})\s*[:]?\s*(\d{1,2})(?=$|[^0-9])/g)];
+   if(compactMatches.length){
+     compactMatches.forEach(m=>addSticker(m[1],m[2],m[0].trim()));
+     const residue=clean.toUpperCase().replace(/(?:^|[^A-Z])([A-Z]{3})\s*[:]?\s*(\d{1,2})(?=$|[^0-9])/g," ").replace(/[\s,;:\-–—]+/g,"").trim();
+     if(!residue)return;
+   }
+
+   // Nombre completo o abreviatura al principio; el guion se trata como separador, no como rango.
+   const normalizedLine=normalizeTradeName(clean);
+   let matchedAlias="";
+   for(const alias of PANINI_SORTED_NAME_ALIASES){if(normalizedLine===alias||normalizedLine.startsWith(alias+" ")){matchedAlias=alias;break;}}
+   if(matchedAlias){
+     const code=PANINI_NORMALIZED_NAME_TO_CODE[matchedAlias];
+     const words=matchedAlias.split(" ").length;
+     const normalizedParts=normalizedLine.split(" ");
+     const numericText=normalizedParts.slice(words).join(" ");
+     const nums=[...numericText.matchAll(/\b(\d{1,2})\b/g)].map(m=>m[1]);
+     if(nums.length){nums.forEach(n=>addSticker(code,n,`${code}${n}`));return;}
+     addInvalid(clean,"No se ha encontrado ningún número de cromo");return;
+   }
+
+   // Si hay números pero el país no se reconoce, sugerir la selección más próxima.
+   const nums=[...clean.matchAll(/\b(\d{1,2})\b/g)].map(m=>m[1]);
+   if(nums.length){
+     const rawName=clean.replace(/[\d,;:\-–—]+/g," ").trim();
+     addInvalid(clean,"Selección no reconocida",suggestPaniniTeamName(rawName)||suggestPaniniCode(rawName)||"");
+   }else addInvalid(clean,"No se ha encontrado ningún código o selección");
+ });
+ return {found,invalid};
 }
 function groupTradeAnalysis(items){const order=currentTeamOrder(),groups={};items.forEach(item=>(groups[item.team]||=[]).push(item));return Object.entries(groups).sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));}
 function escapeTradeHtml(value){return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[char]);}
