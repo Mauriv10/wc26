@@ -4896,3 +4896,80 @@ body.external-share-active .bottom-app-nav{
   max-height:none!important;
   touch-action:auto!important;
 }
+
+
+/* =========================================================
+   BUILD 704.3.6 — CONTRASTE iOS + AJUSTES COMPACTOS
+   Mantener intactos el marco, la barra inferior y el scroll 704.3.5.
+   ========================================================= */
+#tradeAnalyzerInput,
+#tradeReceiveList{
+  background:#fff!important;
+  color:#172033!important;
+  -webkit-text-fill-color:#172033!important;
+  caret-color:#1478e8!important;
+  color-scheme:light;
+}
+#tradeAnalyzerInput::placeholder,
+#tradeReceiveList::placeholder{
+  color:#8b95a5!important;
+  -webkit-text-fill-color:#8b95a5!important;
+  opacity:1;
+}
+#tradeAnalyzerInput::selection,
+#tradeReceiveList::selection{
+  background:rgba(20,120,232,.24);
+  color:#172033;
+  -webkit-text-fill-color:#172033;
+}
+
+.settings-accordion{
+  padding:0!important;
+  overflow:hidden;
+}
+.settings-accordion>summary{
+  list-style:none;
+  margin:0!important;
+  padding:15px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+  min-height:66px;
+}
+.settings-accordion>summary::-webkit-details-marker{display:none}
+.settings-accordion .settings-group-title>div{min-width:0;flex:1}
+.settings-chevron{
+  margin-left:auto;
+  color:#7b8797;
+  font-size:28px;
+  line-height:1;
+  font-weight:500;
+  transform:rotate(0deg);
+  transition:transform .18s ease;
+}
+.settings-accordion[open] .settings-chevron{transform:rotate(90deg)}
+.settings-group-content{
+  padding:0 15px 15px;
+  animation:settingsReveal .16s ease-out;
+}
+@keyframes settingsReveal{
+  from{opacity:.35;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.settings-accordion[open]>summary{
+  border-bottom:1px solid rgba(120,130,145,.14);
+  margin-bottom:14px!important;
+}
+.info-group .settings-group-title{margin-bottom:0!important}
+@media(max-width:430px){
+  .settings-accordion>summary{padding:13px;min-height:62px}
+  .settings-group-content{padding:0 13px 13px}
+}
+@media(prefers-color-scheme:dark){
+  #tradeAnalyzerInput,#tradeReceiveList{
+    background:#fff!important;
+    color:#172033!important;
+    -webkit-text-fill-color:#172033!important;
+  }
+  .settings-chevron{color:#a8b4c4}
+}

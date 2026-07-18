@@ -1,3 +1,10 @@
+# Build 704.3.6
+
+- Corrige el contraste del texto pegado en el asistente cuando iOS está en modo oscuro.
+- Convierte Ajustes en secciones plegables para reducir el scroll.
+- Solo una sección de Ajustes puede permanecer abierta a la vez.
+- Mantiene sin cambios la barra inferior y el sistema de scroll validado en la 704.3.5.
+
 # Build 704.3.5
 
 - Se mantiene sin cambios el marco inferior estable de la 704.3.4.

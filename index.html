@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="World Cup 2026">
-  <title>World Cup 2026 · Build 704.3.5</title>
+  <title>World Cup 2026 · Build 704.3.6</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="canonical" href="https://mauriv10.github.io/wc26/">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/world-cup-2026-apple-v522.png">
@@ -536,47 +536,45 @@
   </div>
 
   <div class="settings-groups">
-    <section class="settings-group">
-      <div class="settings-group-title"><span class="settings-glyph blue">●</span><div><strong>Cuenta</strong><small>Sesión y acceso multidispositivo</small></div></div>
-      <div class="account-settings-card">
-        <div><span id="accountStatusLabel">Modo local</span><strong id="accountEmailLabel">Sin cuenta conectada</strong></div>
-        <button id="accountActionButton" type="button">Iniciar sesión</button>
+    <details class="settings-group settings-accordion">
+      <summary class="settings-group-title"><span class="settings-glyph blue">●</span><div><strong>Cuenta</strong><small>Sesión y acceso multidispositivo</small></div><span class="settings-chevron">›</span></summary>
+      <div class="settings-group-content">
+        <div class="account-settings-card">
+          <div><span id="accountStatusLabel">Modo local</span><strong id="accountEmailLabel">Sin cuenta conectada</strong></div>
+          <button id="accountActionButton" type="button">Iniciar sesión</button>
+        </div>
       </div>
-    </section>
+    </details>
 
+    <details class="settings-group settings-accordion">
+      <summary class="settings-group-title"><span class="settings-glyph green">↻</span><div><strong>Sincronización</strong><small>Importar, exportar y revisar cambios</small></div><span class="settings-chevron">›</span></summary>
+      <div class="settings-group-content"><div id="settingsSyncSlot" class="settings-slot"></div></div>
+    </details>
 
+    <details class="settings-group settings-accordion">
+      <summary class="settings-group-title"><span class="settings-glyph purple">◆</span><div><strong>Seguridad</strong><small>Copias y restauración</small></div><span class="settings-chevron">›</span></summary>
+      <div class="settings-group-content"><div id="settingsBackupSlot" class="settings-slot"></div></div>
+    </details>
 
-    <section class="settings-group">
-      <div class="settings-group-title"><span class="settings-glyph green">↻</span><div><strong>Sincronización</strong><small>Importar, exportar y revisar cambios</small></div></div>
-      <div id="settingsSyncSlot" class="settings-slot"></div>
-    </section>
+    <details class="settings-group settings-accordion">
+      <summary class="settings-group-title"><span class="settings-glyph orange">◷</span><div><strong>Actividad</strong><small>Historial, sesión y herramientas</small></div><span class="settings-chevron">›</span></summary>
+      <div class="settings-group-content"><div id="settingsActionsSlot" class="settings-slot"></div></div>
+    </details>
 
-    <section class="settings-group">
-      <div class="settings-group-title"><span class="settings-glyph purple">◆</span><div><strong>Seguridad</strong><small>Copias y restauración</small></div></div>
-      <div id="settingsBackupSlot" class="settings-slot"></div>
-    </section>
+    <details class="settings-group settings-accordion">
+      <summary class="settings-group-title"><span class="settings-glyph yellow">★</span><div><strong>Intercambios</strong><small>Estrellas y cromos protegidos</small></div><span class="settings-chevron">›</span></summary>
+      <div class="settings-group-content"><div id="tradeProtectionSettings" class="trade-protection-settings"></div></div>
+    </details>
 
-    <section class="settings-group">
-      <div class="settings-group-title"><span class="settings-glyph orange">◷</span><div><strong>Actividad</strong><small>Historial, sesión y herramientas</small></div></div>
-      <div id="settingsActionsSlot" class="settings-slot"></div>
-    </section>
-
-
-    <section class="settings-group">
-      <div class="settings-group-title"><span class="settings-glyph yellow">★</span><div><strong>Intercambios</strong><small>Estrellas y cromos protegidos</small></div></div>
-      <div id="tradeProtectionSettings" class="trade-protection-settings"></div>
-    </section>
-
-    <section class="settings-group info-group">
-      <div class="settings-group-title">
-        <span class="settings-glyph gray">i</span>
-        <div><strong>Información</strong><small>World Cup 2026</small></div>
+    <details class="settings-group settings-accordion info-group">
+      <summary class="settings-group-title"><span class="settings-glyph gray">i</span><div><strong>Información</strong><small>World Cup 2026</small></div><span class="settings-chevron">›</span></summary>
+      <div class="settings-group-content">
+        <div class="settings-info-list">
+          <div><span>Versión</span><strong>Build 704.3.6 · Ajustes compactos</strong></div>
+          <div><span>Modo</span><strong>Disponible offline</strong></div>
+        </div>
       </div>
-      <div class="settings-info-list">
-        <div><span>Versión</span><strong>Build 704.3 · Estabilización y flujo claro</strong></div>
-        <div><span>Modo</span><strong>Disponible offline</strong></div>
-      </div>
-    </section>
+    </details>
   </div>
 </dialog>
 </body>

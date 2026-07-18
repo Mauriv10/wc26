@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.3.5";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.3.6";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -2536,3 +2536,10 @@ document.addEventListener("DOMContentLoaded",()=>{
  $("#deleteCollectionButton")?.addEventListener("click",deleteEditedCollection);
  $("#editCollectionDialog")?.addEventListener("click",event=>{if(event.target===$("#editCollectionDialog"))closeEditCollection()});
 });
+
+// BUILD 704.3.6 — Ajustes en acordeón: una sección abierta cada vez.
+document.addEventListener("toggle",event=>{
+ const item=event.target;
+ if(!(item instanceof HTMLDetailsElement)||!item.matches(".settings-accordion")||!item.open)return;
+ document.querySelectorAll(".settings-accordion[open]").forEach(other=>{if(other!==item)other.open=false;});
+},true);
