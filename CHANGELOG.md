@@ -1,3 +1,10 @@
+# Build 704.5.1 · Actualización y buscadores
+
+- Fuerza la activación inmediata del nuevo service worker y renueva la caché de la PWA.
+- Sincroniza todas las referencias internas y visibles con la versión 704.5.1.
+- El buscador principal muestra sus resultados por encima del contenido, sin quedar recortados por la cabecera.
+- Mantiene intactas la barra inferior estable, el asistente y el inventario.
+
 # Build 704.5 · Mercat Workflow
 
 - Buscador principal reparado con nombres, códigos, castellano e inglés.

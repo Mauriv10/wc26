@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.5";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.5.1";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -2496,17 +2496,20 @@ async function installAvailableUpdate(){
    if(registration){
      serviceWorkerRegistration=registration;
      await registration.update().catch(()=>{});
-     if(registration.waiting){
-       registration.waiting.postMessage({type:"SKIP_WAITING"});
+     const worker=registration.waiting||registration.installing;
+     if(worker){
+       worker.postMessage({type:"SKIP_WAITING"});
+       setTimeout(()=>{
+         const url=new URL(location.href);
+         url.searchParams.set("updated",Date.now());
+         location.replace(url.toString());
+       },1800);
        return;
      }
-     if(registration.installing){
-       const worker=registration.installing;
-       worker.addEventListener("statechange",()=>{
-         if(worker.state==="installed")worker.postMessage({type:"SKIP_WAITING"});
-       });
-       return;
-     }
+   }
+   if("caches" in window){
+     const keys=await caches.keys();
+     await Promise.all(keys.filter(key=>key.startsWith("wc26-build-")).map(key=>caches.delete(key)));
    }
    const url=new URL(location.href);
    url.searchParams.set("updated",Date.now());
