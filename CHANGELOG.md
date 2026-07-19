@@ -1,3 +1,11 @@
+# Build 704.5 · Mercat Workflow
+
+- Buscador principal reparado con nombres, códigos, castellano e inglés.
+- Selector de selección ajustado para mostrar resultados encima del teclado.
+- Celebración única al completar el objetivo del álbum.
+- Nuevo botón Completar intercambio para sumar recibidos y restar entregados automáticamente.
+- La actualización automática requiere una lista exacta de cromos recibidos; el modo Cantidades no puede inventar códigos.
+
 # Build 704.4
 
 - Zona superior clara para eliminar la franja oscura en la PWA.

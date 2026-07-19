@@ -5018,3 +5018,13 @@ html,body{background-color:#eef6ff!important}
   }
   .compact-home-copy h1{font-size:clamp(30px,8.2vw,40px)!important}
 }
+
+/* Build 704.5: búsquedas, teclado iOS y celebración */
+#teamDialog{align-items:flex-start;padding-top:max(14px,env(safe-area-inset-top));}
+#teamDialog .dialog-card{display:flex;flex-direction:column;max-height:calc(100dvh - env(safe-area-inset-top) - 18px);overflow:hidden;}
+#teamDialog .dialog-search{flex:0 0 auto;font-size:16px;}
+#teamDialog .team-list{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-padding-bottom:18px;}
+.suggestion small{margin-left:auto;color:var(--apple-secondary);font-weight:800;}
+.album-complete-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:rgba(12,25,42,.48);backdrop-filter:blur(18px);}
+.album-complete-overlay[hidden]{display:none!important}.album-complete-card{width:min(92vw,420px);padding:34px 24px;border-radius:30px;background:#fff;text-align:center;box-shadow:0 30px 90px rgba(0,0,0,.28);animation:albumPop .35s ease-out}.album-complete-emoji{font-size:64px}.album-complete-card h2{font-size:30px;margin:10px 0 6px}.album-complete-card p{color:#667085;margin:0 0 22px}.album-complete-card button{width:100%;min-height:54px}@keyframes albumPop{from{transform:scale(.86);opacity:0}to{transform:scale(1);opacity:1}}
+.complete-trade-action{background:#16a34a;color:#fff;border:0}.complete-trade-action:disabled{background:#d9dde3;color:#7b8491}
