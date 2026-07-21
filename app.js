@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.5.1";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.6";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -53,8 +53,22 @@ function projectTeamOrder(project=projects?.[activeProjectId],sourceInventory=pr
  return [...preferred,...available].filter(team=>available.includes(team)&&!seen.has(team)&&seen.add(team));
 }
 function currentTeamOrder(){return projectTeamOrder(projects?.[activeProjectId],inventory)}
+function ensureProjectInventorySchema(project){
+ if(!project||!project.inventory)return;
+ // FWC se mostraba antiguamente como 01–20. La app usa ahora los códigos reales 00–19.
+ const currentFwc=project.inventory.FWC||{};
+ if(Object.prototype.hasOwnProperty.call(currentFwc,"20")&&!Object.prototype.hasOwnProperty.call(currentFwc,"00")){
+   const migrated={};
+   for(let n=1;n<=20;n++)migrated[String(n-1).padStart(2,"0")]=Number(currentFwc[String(n).padStart(2,"0")])||0;
+   project.inventory.FWC=migrated;
+ }
+ // Coca-Cola es una colección independiente de colaboración, CC01–CC12.
+ if(!project.inventory["Coca-Cola"])project.inventory["Coca-Cola"]=Object.fromEntries(Array.from({length:12},(_,i)=>[String(i+1).padStart(2,"0"),0]));
+ else for(let n=1;n<=12;n++){const code=String(n).padStart(2,"0");if(!Object.prototype.hasOwnProperty.call(project.inventory["Coca-Cola"],code))project.inventory["Coca-Cola"][code]=0;}
+}
 function ensureProjectTeamOrder(project){
  if(!project)return;
+ ensureProjectInventorySchema(project);
  project.teamOrder=projectTeamOrder(project,project.inventory);
  if(!project.selectedTeam||!project.inventory?.[project.selectedTeam])project.selectedTeam=project.teamOrder[0]||"";
  project.ui={teamFilter:"all",collectionFilter:"all",currentFilter:"all",sort:"album",mainTab:"collection",scrollY:0,...(project.ui||{})};
@@ -334,7 +348,7 @@ async function loadData(){
 }
 function readJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
 function normalize(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
-function flagHTML(team){return `<img src="${flags[team]||""}" alt="">`}
+function flagHTML(team){const flag=flags[team]||TEAM_FLAG_EMOJI?.[team]||"";return /^(?:\.|\/|https?:|data:)/.test(flag)?`<img src="${flag}" alt="">`:`<span class="inline-flag-emoji" aria-hidden="true">${flag}</span>`}
 function formatTime(iso){return new Date(iso).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}
 function getTarget(){return Math.max(1,Number(targetInput.value)||5)}
 function keyFor(team,code){return `${team}|||${code}`}
@@ -419,7 +433,10 @@ function renderTeamList(teams){
  const worldButton=`<button class="team-option world-option" data-team="all">
    <span class="team-option-world-icon">🌍</span><strong>Todas las selecciones</strong>
  </button>`;
- $("#teamList").innerHTML=worldButton+teams.map(team=>`<button class="team-option" data-team="${team}">${flagHTML(team)}<strong>${team}</strong></button>`).join("");
+ const pinned=["FWC","Coca-Cola"].filter(team=>teams.includes(team));
+ const regular=teams.filter(team=>!pinned.includes(team));
+ const categoryButtons=pinned.map(team=>`<button class="team-option featured-team-option" data-team="${team}"><span class="team-option-world-icon">${TEAM_FLAG_EMOJI[team]||""}</span><strong>${team==="Coca-Cola"?"Coca-Cola · CC":team+" · Especiales"}</strong></button>`).join("");
+ $("#teamList").innerHTML=worldButton+categoryButtons+regular.map(team=>`<button class="team-option" data-team="${team}">${flagHTML(team)}<strong>${team}</strong></button>`).join("");
  $("#teamList").querySelectorAll("button").forEach(button=>button.onclick=()=>{
    selectTeam(button.dataset.team);
    $("#teamDialog").close();
@@ -573,7 +590,7 @@ function updateLastChange(){
 }
 
 function isShinySticker(team,code){
- return team==="FWC"||code==="01";
+ return team==="FWC"||(team!=="Coca-Cola"&&code==="01");
 }
 function collectionStickerMatches(team,code,qty){
  const target=getTarget();
@@ -582,6 +599,7 @@ function collectionStickerMatches(team,code,qty){
  if(effectiveFilter==="missing")return qty<target;
  if(effectiveFilter==="repeats")return qty>target;
  if(effectiveFilter==="shiny")return isShinySticker(team,code);
+ if(effectiveFilter==="collaboration")return team==="Coca-Cola";
  return true;
 }
 
@@ -746,11 +764,11 @@ const TEAM_FLAG_EMOJI={
  "Argentina":"🇦🇷","Argelia":"🇩🇿","Austria":"🇦🇹","Jordania":"🇯🇴",
  "Portugal":"🇵🇹","RD Congo":"🇨🇩","Uzbekistán":"🇺🇿","Colombia":"🇨🇴",
  "Inglaterra":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croacia":"🇭🇷","Ghana":"🇬🇭","Panamá":"🇵🇦",
- "FWC":"⭐"
+ "FWC":"⭐","Coca-Cola":"🥤"
 };
 
 const PANINI_TEAM_CODES={
- "FWC":"FWC","MEX":"México","RSA":"Sudáfrica","KOR":"Corea del Sur","CZE":"Chequia",
+ "FWC":"FWC","CC":"Coca-Cola","MEX":"México","RSA":"Sudáfrica","KOR":"Corea del Sur","CZE":"Chequia",
  "CAN":"Canadá","BIH":"Bosnia y Herzegovina","QAT":"Catar","SUI":"Suiza",
  "BRA":"Brasil","MAR":"Marruecos","HAI":"Haití","SCO":"Escocia",
  "USA":"Estados Unidos","PAR":"Paraguay","AUS":"Australia","TUR":"Turquía",
@@ -768,7 +786,7 @@ const PANINI_CODE_ALIASES={JAP:"JPN",SAU:"KSA",NLD:"NED",HOL:"NED",KOR:"KOR",RDC
 
 // Nombres admitidos para listas copiadas desde WhatsApp, en castellano e inglés.
 const PANINI_TEAM_NAME_ALIASES={
- FWC:["fwc","fifa world cup","mundial"],
+ FWC:["fwc","fifa world cup","mundial"],CC:["cc","coca cola","coca-cola","cocacola","colaboracion coca cola","colaboración coca cola"],
  MEX:["mexico","méxico"],RSA:["south africa","sudafrica","sudáfrica"],KOR:["south korea","korea republic","corea del sur","corea"],CZE:["czechia","czech republic","chequia","republica checa","república checa"],
  CAN:["canada","canadá"],BIH:["bosnia and herzegovina","bosnia-herzegovina","bosnia y herzegovina","bosnia"],QAT:["qatar","catar"],SUI:["switzerland","suiza"],
  BRA:["brazil","brasil"],MAR:["morocco","marruecos","morroco","marocco"],HAI:["haiti","haití"],SCO:["scotland","escocia"],
@@ -798,13 +816,14 @@ function filterTeamsByQuery(query){
 
 function paniniDisplayCode(team,internalCode){
  const n=Number(internalCode);
- return team==="FWC"?String(Math.max(0,n-1)).padStart(2,"0"):String(n).padStart(2,"0");
+ return String(n).padStart(2,"0");
 }
 
 function paniniInternalCode(team,displayNumber){
  const n=Number(displayNumber);
  if(!Number.isInteger(n))return null;
- if(team==="FWC")return n>=0&&n<=19?String(n+1).padStart(2,"0"):null;
+ if(team==="FWC")return n>=0&&n<=19?String(n).padStart(2,"0"):null;
+ if(team==="Coca-Cola")return n>=1&&n<=12?String(n).padStart(2,"0"):null;
  return n>=1&&n<=20?String(n).padStart(2,"0"):null;
 }
 
@@ -972,7 +991,7 @@ function currentTradePreferences(){
 function isTradeStar(item){const key=tradeStickerKey(item);return Boolean(DEFAULT_TOP_STARS[key]||currentTradePreferences().stars[key])}
 function isTradeProtected(item){const key=tradeStickerKey(item);return Boolean(DEFAULT_TOP_STARS[key]||currentTradePreferences().protected[key])}
 function tradeStarName(item){return DEFAULT_TOP_STARS[tradeStickerKey(item)]||""}
-function tradeStickerCategory(item){return item.team==="FWC"||Number(item.displayCode)===1?"special":"normal"}
+function tradeStickerCategory(item){return item.team==="Coca-Cola"?"collaboration":item.team==="FWC"||(item.team!=="Coca-Cola"&&Number(item.displayCode)===1)?"special":"normal"}
 function toggleTradeMark(item,type){
  const prefs=currentTradePreferences();const key=tradeStickerKey(item);
  if(DEFAULT_TOP_STARS[key]&&type==="protected"){showToast("Esta estrella TOP está protegida por defecto");return;}
@@ -1004,7 +1023,7 @@ function parseTradeList(rawText){
  const addSticker=(rawCode,number,rawToken)=>{
    let code=String(rawCode||"").toUpperCase();code=PANINI_CODE_ALIASES[code]||code;const team=PANINI_TEAM_CODES[code];
    if(!team){addInvalid(rawToken||`${rawCode}${number}`,"Selección no reconocida",suggestPaniniCode(rawCode)||suggestPaniniTeamName(rawCode)||"");return;}
-   const internalCode=paniniInternalCode(team,number);if(!internalCode){addInvalid(rawToken||`${code}${number}`,team==="FWC"?"FWC admite números del 00 al 19":"El número debe estar entre 01 y 20");return;}
+   const internalCode=paniniInternalCode(team,number);if(!internalCode){addInvalid(rawToken||`${code}${number}`,team==="FWC"?"FWC admite números del 00 al 19":team==="Coca-Cola"?"CC admite números del 01 al 12":"El número debe estar entre 01 y 20");return;}
    const key=`${team}|${internalCode}`;if(seen.has(key))return;seen.add(key);found.push({team,officialCode:code,internalCode,displayCode:paniniDisplayCode(team,internalCode)});
  };
  String(rawText||"").replace(/\r/g,"").split("\n").forEach(originalLine=>{
@@ -1049,13 +1068,13 @@ function escapeTradeHtml(value){return String(value??"").replace(/[&<>"']/g,char
 function applyTradeAnalyzerSuggestion(raw,replacement){const input=$("#tradeAnalyzerInput");if(!input||!raw||!replacement)return;const escaped=String(raw).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");input.value=input.value.replace(new RegExp(escaped,"i"),replacement);renderTradeAnalyzerResult();}
 function editTradeAnalyzerList(){const dialog=$("#tradeAnalyzerDialog");dialog?.classList.remove("analyzed","exchange-step");$("#tradeAnalyzerEntry").hidden=false;$("#tradeAnalyzerResult").hidden=true;$("#tradeAnalyzerBody")?.scrollTo({top:0,behavior:"auto"});setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),60);}
 function tradeCopyLines(items,includeQuantities=true){return groupTradeAnalysis(items).map(([team,rows])=>`${TEAM_FLAG_EMOJI[team]||""} ${TEAM_TO_PANINI_CODE[team]||team}: ${rows.map(row=>{const units=Object.prototype.hasOwnProperty.call(row,"selectedUnits")?row.selectedUnits:row.available;return includeQuantities&&units>1?`${row.displayCode} x${units}`:row.displayCode;}).join(" ")}`);}
-function chooseBalancedTrade(available,normalNeeded,specialNeeded,allowDuplicates=false){const pool=available.filter(x=>!isTradeProtected(x)&&!isTradeStar(x)).sort((a,b)=>b.available-a.available||currentTeamOrder().indexOf(a.team)-currentTeamOrder().indexOf(b.team)||Number(a.displayCode)-Number(b.displayCode));const take=(category,needed)=>{const candidates=pool.filter(x=>tradeStickerCategory(x)===category),selected=[];let left=Math.max(0,Number(needed)||0);for(const item of candidates){if(left<=0)break;selected.push({...item,selectedUnits:1});left--;}if(allowDuplicates&&left>0){let pass=2;while(left>0){let added=false;for(const item of candidates){if(left<=0)break;if(item.available>=pass){selected.find(x=>tradeStickerKey(x)===tradeStickerKey(item)).selectedUnits++;left--;added=true;}}if(!added)break;pass++;}}return {selected,left};};const normals=take("normal",normalNeeded),specials=take("special",specialNeeded);return {items:[...normals.selected,...specials.selected],missingNormal:normals.left,missingSpecial:specials.left};}
+function chooseBalancedTrade(available,normalNeeded,specialNeeded,collaborationNeeded=0,allowDuplicates=false){const pool=available.filter(x=>!isTradeProtected(x)&&!isTradeStar(x)).sort((a,b)=>b.available-a.available||currentTeamOrder().indexOf(a.team)-currentTeamOrder().indexOf(b.team)||Number(a.displayCode)-Number(b.displayCode));const take=(category,needed)=>{const candidates=pool.filter(x=>tradeStickerCategory(x)===category),selected=[];let left=Math.max(0,Number(needed)||0);for(const item of candidates){if(left<=0)break;selected.push({...item,selectedUnits:1});left--;}if(allowDuplicates&&left>0){let pass=2;while(left>0){let added=false;for(const item of candidates){if(left<=0)break;if(item.available>=pass){selected.find(x=>tradeStickerKey(x)===tradeStickerKey(item)).selectedUnits++;left--;added=true;}}if(!added)break;pass++;}}return {selected,left};};const normals=take("normal",normalNeeded),specials=take("special",specialNeeded),collaborations=take("collaboration",collaborationNeeded);return {items:[...normals.selected,...specials.selected,...collaborations.selected],missingNormal:normals.left,missingSpecial:specials.left,missingCollaboration:collaborations.left};}
 function renderInvalidLines(items){if(!items.length)return "";return `<div class="trade-review-list">${items.map(item=>{const numberMatch=String(item.raw).match(/(\d{1,2})/),replacement=item.suggestion&&numberMatch?`${item.suggestion}${String(numberMatch[1]).padStart(2,"0")}`:"";return `<div class="trade-review-item"><div><strong>${escapeTradeHtml(item.raw)}</strong><small>${escapeTradeHtml(item.reason)}</small></div>${replacement?`<button type="button" data-raw="${escapeTradeHtml(item.raw)}" data-replacement="${escapeTradeHtml(replacement)}">Corregir</button>`:""}</div>`;}).join("")}</div>`;}
 function wireInvalidCorrections(root){root.querySelectorAll("[data-replacement]").forEach(b=>b.addEventListener("click",()=>applyTradeAnalyzerSuggestion(b.dataset.raw,b.dataset.replacement)));}
 function renderBalancedStickerList(items){
- const normal=items.filter(item=>tradeStickerCategory(item)==="normal"),special=items.filter(item=>tradeStickerCategory(item)==="special");
+ const normal=items.filter(item=>tradeStickerCategory(item)==="normal"),special=items.filter(item=>tradeStickerCategory(item)==="special"),collaboration=items.filter(item=>tradeStickerCategory(item)==="collaboration");
  const section=(label,rows,detail="")=>{if(!rows.length)return "";const units=rows.reduce((sum,item)=>sum+(item.selectedUnits||1),0);return `<section class="balanced-sticker-section"><header><strong>${label}</strong><span>${units}${detail}</span></header><div class="balanced-sticker-groups">${groupTradeAnalysis(rows).map(([team,teamRows])=>`<div class="balanced-sticker-row"><b>${TEAM_FLAG_EMOJI[team]||""} ${TEAM_TO_PANINI_CODE[team]||team}</b><span>${teamRows.map(row=>{const units=row.selectedUnits||1;return `${row.displayCode}${units>1?` ×${units}`:""}`;}).join(" · ")}</span></div>`).join("")}</div></section>`;};
- return `${section("Normales",normal," cromos")}${section("Especiales",special," cromos")}`;
+ return `${section("Normales",normal," cromos")}${section("Especiales",special," cromos")}${section("Colaboración",collaboration," cromos")}`;
 }
 function applyAssistantTrade(receivedItems,givenItems,button){
  if(!receivedItems?.length){showToast("Pega la lista recibida para actualizar el inventario");return;}
@@ -1066,24 +1085,24 @@ function applyAssistantTrade(receivedItems,givenItems,button){
  changes.forEach(({item,delta,previous,next})=>{inventory[item.team][item.internalCode]=next;markPendingSync(item.team,item.internalCode,previous,next,"asistente-intercambio");history.push({id:makeId(),team:item.team,code:item.internalCode,previous,next,delta,at:now,source:"asistente-intercambio"});if(delta>0)sessionStats.plus+=delta;else sessionStats.minus+=Math.abs(delta);});
  saveAll("Intercambio completado");renderAll();checkAlbumCompletion(wasComplete);button.textContent="Intercambio completado ✓";showToast("✓ Inventario actualizado");
 }
-function renderBalancedTrade(box,available,normalNeeded,specialNeeded,allowDuplicates=null,receivedItems=null){
- const balanced=chooseBalancedTrade(available,normalNeeded,specialNeeded,allowDuplicates===true),delivered=balanced.items.reduce((s,x)=>s+(x.selectedUnits||1),0),short=balanced.missingNormal+balanced.missingSpecial;
+function renderBalancedTrade(box,available,normalNeeded,specialNeeded,collaborationNeeded=0,allowDuplicates=null,receivedItems=null){
+ const balanced=chooseBalancedTrade(available,normalNeeded,specialNeeded,collaborationNeeded,allowDuplicates===true),delivered=balanced.items.reduce((s,x)=>s+(x.selectedUnits||1),0),short=balanced.missingNormal+balanced.missingSpecial+balanced.missingCollaboration;
  const canApply=Array.isArray(receivedItems)&&receivedItems.length>0;
  box.innerHTML=`<div class="trade-clean-status"><strong>${delivered} cromos para entregar</strong></div>${short&&allowDuplicates===null?`<div class="trade-clean-choice"><span>Solo tienes ${delivered} cromos diferentes disponibles.</span><button type="button" data-balance-choice="different">Usar solo diferentes</button><button type="button" class="primary" data-balance-choice="duplicates">Completar con iguales</button></div>`:short?`<p class="trade-clean-note">La propuesta queda ${short} unidades por debajo.</p>`:""}${balanced.items.length?`<div class="balanced-sticker-list">${renderBalancedStickerList(balanced.items)}</div><button id="copyBalancedTrade" class="primary trade-main-action" type="button">Copiar intercambio</button><button id="completeAssistantTrade" class="trade-main-action complete-trade-action" type="button" ${canApply?"":"disabled"}>Completar intercambio</button>${canApply?"":`<p class="trade-clean-note">Para actualizar el inventario automáticamente, pega la lista exacta que vas a recibir.</p>`}`:""}`;
- box.querySelector('[data-balance-choice="different"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,false,receivedItems));
- box.querySelector('[data-balance-choice="duplicates"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,true,receivedItems));
+ box.querySelector('[data-balance-choice="different"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,collaborationNeeded,false,receivedItems));
+ box.querySelector('[data-balance-choice="duplicates"]')?.addEventListener("click",()=>renderBalancedTrade(box,available,normalNeeded,specialNeeded,collaborationNeeded,true,receivedItems));
  $("#copyBalancedTrade")?.addEventListener("click",async event=>{const fb=actionFeedback(event.currentTarget,{busy:"Copiando…",done:"Copiado ✓"});try{await copyShareText(tradeCopyLines(balanced.items,true).join("\n"));fb.success();}catch{fb.fail("Error");}});
  $("#completeAssistantTrade")?.addEventListener("click",event=>applyAssistantTrade(receivedItems,balanced.items,event.currentTarget));
 }
 function renderExchangeStep(available){
  const result=$("#tradeAnalyzerResult"),dialog=$("#tradeAnalyzerDialog");dialog?.classList.add("exchange-step");
- result.innerHTML=`<button id="backToTradeSummary" class="trade-back-button" type="button">← Volver</button><div class="trade-clean-card"><h3>¿Qué te dará la otra persona?</h3><div class="trade-receive-tabs"><button type="button" class="active" data-receive-mode="list">Pegar lista</button><button type="button" data-receive-mode="counts">Cantidades</button></div><div id="tradeReceiveListPanel"><p class="trade-context-label compact">Pega la lista de cromos que vas a recibir</p><textarea id="tradeReceiveList" rows="6" placeholder="Ejemplo: Francia 15 · FWC 18"></textarea></div><div id="tradeReceiveCountsPanel" hidden><div class="trade-count-stepper" data-count-kind="normal"><span>Normales</span><div class="trade-count-controls"><button type="button" class="trade-count-btn" data-count-action="decrease" aria-label="Restar cromo normal">−</button><output id="tradeReceiveNormalCount" aria-live="polite">0</output><button type="button" class="trade-count-btn primary" data-count-action="increase" aria-label="Sumar cromo normal">+</button></div></div><div class="trade-count-stepper" data-count-kind="special"><span>Especiales</span><div class="trade-count-controls"><button type="button" class="trade-count-btn" data-count-action="decrease" aria-label="Restar cromo especial">−</button><output id="tradeReceiveSpecialCount" aria-live="polite">0</output><button type="button" class="trade-count-btn primary" data-count-action="increase" aria-label="Sumar cromo especial">+</button></div></div></div><button id="generateBalancedTrade" class="primary trade-main-action" type="button">Generar intercambio</button><div id="receivedListErrors"></div><div id="balancedTradeResult"></div></div>`;
+ result.innerHTML=`<button id="backToTradeSummary" class="trade-back-button" type="button">← Volver</button><div class="trade-clean-card"><h3>¿Qué te dará la otra persona?</h3><div class="trade-receive-tabs"><button type="button" class="active" data-receive-mode="list">Pegar lista</button><button type="button" data-receive-mode="counts">Cantidades</button></div><div id="tradeReceiveListPanel"><p class="trade-context-label compact">Pega la lista de cromos que vas a recibir</p><textarea id="tradeReceiveList" rows="6" placeholder="Ejemplo: Francia 15 · FWC 18"></textarea></div><div id="tradeReceiveCountsPanel" hidden><div class="trade-count-stepper" data-count-kind="normal"><span>Normales</span><div class="trade-count-controls"><button type="button" class="trade-count-btn" data-count-action="decrease" aria-label="Restar cromo normal">−</button><output id="tradeReceiveNormalCount" aria-live="polite">0</output><button type="button" class="trade-count-btn primary" data-count-action="increase" aria-label="Sumar cromo normal">+</button></div></div><div class="trade-count-stepper" data-count-kind="special"><span>Especiales</span><div class="trade-count-controls"><button type="button" class="trade-count-btn" data-count-action="decrease" aria-label="Restar cromo especial">−</button><output id="tradeReceiveSpecialCount" aria-live="polite">0</output><button type="button" class="trade-count-btn primary" data-count-action="increase" aria-label="Sumar cromo especial">+</button></div></div><div class="trade-count-stepper" data-count-kind="collaboration"><span>Colaboración</span><div class="trade-count-controls"><button type="button" class="trade-count-btn" data-count-action="decrease" aria-label="Restar cromo de colaboración">−</button><output id="tradeReceiveCollaborationCount" aria-live="polite">0</output><button type="button" class="trade-count-btn primary" data-count-action="increase" aria-label="Sumar cromo de colaboración">+</button></div></div></div><button id="generateBalancedTrade" class="primary trade-main-action" type="button">Generar intercambio</button><div id="receivedListErrors"></div><div id="balancedTradeResult"></div></div>`;
  $("#backToTradeSummary")?.addEventListener("click",renderTradeAnalyzerResult);
  result.querySelectorAll("[data-receive-mode]").forEach(btn=>btn.addEventListener("click",()=>{result.querySelectorAll("[data-receive-mode]").forEach(x=>x.classList.toggle("active",x===btn));$("#tradeReceiveListPanel").hidden=btn.dataset.receiveMode!=="list";$("#tradeReceiveCountsPanel").hidden=btn.dataset.receiveMode!=="counts";$("#receivedListErrors").innerHTML="";$("#balancedTradeResult").innerHTML="";}));
- const countState={normal:0,special:0};
- const renderCount=(kind)=>{const out=$(kind==="normal"?"#tradeReceiveNormalCount":"#tradeReceiveSpecialCount");if(out)out.textContent=String(countState[kind]);};
+ const countState={normal:0,special:0,collaboration:0};
+ const renderCount=(kind)=>{const out=$(kind==="normal"?"#tradeReceiveNormalCount":kind==="special"?"#tradeReceiveSpecialCount":"#tradeReceiveCollaborationCount");if(out)out.textContent=String(countState[kind]);};
  result.querySelectorAll(".trade-count-stepper").forEach(stepper=>{stepper.querySelectorAll("[data-count-action]").forEach(button=>button.addEventListener("click",()=>{const kind=stepper.dataset.countKind;const delta=button.dataset.countAction==="increase"?1:-1;countState[kind]=Math.max(0,countState[kind]+delta);renderCount(kind);if(navigator.vibrate)navigator.vibrate(8);}));});
- $("#generateBalancedTrade")?.addEventListener("click",event=>{const fb=actionFeedback(event.currentTarget,{busy:"Generando…",done:"Generado ✓"});let normalNeeded=0,specialNeeded=0,receivedItems=null;const errors=$("#receivedListErrors");if(!$("#tradeReceiveListPanel").hidden){const received=parseTradeList($("#tradeReceiveList").value);receivedItems=received.found;normalNeeded=received.found.filter(x=>tradeStickerCategory(x)==="normal").length;specialNeeded=received.found.length-normalNeeded;if(received.invalid.length){errors.innerHTML=`<details class="trade-ignored-lines"><summary>${received.invalid.length} ${received.invalid.length===1?"línea ignorada":"líneas ignoradas"}</summary>${renderInvalidLines(received.invalid)}</details>`;wireInvalidCorrections(errors);}else errors.innerHTML="";}else{normalNeeded=countState.normal;specialNeeded=countState.special;errors.innerHTML="";}if(!normalNeeded&&!specialNeeded){fb.fail("No hay cromos válidos");return;}renderBalancedTrade($("#balancedTradeResult"),available,normalNeeded,specialNeeded,null,receivedItems);requestAnimationFrame(()=>{const body=$("#tradeAnalyzerBody"),target=$("#balancedTradeResult");if(body&&target)body.scrollTo({top:Math.max(0,target.offsetTop-16),behavior:"auto"});});fb.success();});
+ $("#generateBalancedTrade")?.addEventListener("click",event=>{const fb=actionFeedback(event.currentTarget,{busy:"Generando…",done:"Generado ✓"});let normalNeeded=0,specialNeeded=0,collaborationNeeded=0,receivedItems=null;const errors=$("#receivedListErrors");if(!$("#tradeReceiveListPanel").hidden){const received=parseTradeList($("#tradeReceiveList").value);receivedItems=received.found;normalNeeded=received.found.filter(x=>tradeStickerCategory(x)==="normal").length;specialNeeded=received.found.filter(x=>tradeStickerCategory(x)==="special").length;collaborationNeeded=received.found.filter(x=>tradeStickerCategory(x)==="collaboration").length;if(received.invalid.length){errors.innerHTML=`<details class="trade-ignored-lines"><summary>${received.invalid.length} ${received.invalid.length===1?"línea ignorada":"líneas ignoradas"}</summary>${renderInvalidLines(received.invalid)}</details>`;wireInvalidCorrections(errors);}else errors.innerHTML="";}else{normalNeeded=countState.normal;specialNeeded=countState.special;collaborationNeeded=countState.collaboration;errors.innerHTML="";}if(!normalNeeded&&!specialNeeded&&!collaborationNeeded){fb.fail("No hay cromos válidos");return;}renderBalancedTrade($("#balancedTradeResult"),available,normalNeeded,specialNeeded,collaborationNeeded,null,receivedItems);requestAnimationFrame(()=>{const body=$("#tradeAnalyzerBody"),target=$("#balancedTradeResult");if(body&&target)body.scrollTo({top:Math.max(0,target.offsetTop-16),behavior:"auto"});});fb.success();});
 }
 function renderTradeAnalyzerResult(){const input=$("#tradeAnalyzerInput"),result=$("#tradeAnalyzerResult"),dialog=$("#tradeAnalyzerDialog");if(!input||!result)return;const parsed=parseTradeList(input.value);if(!parsed.found.length&&!parsed.invalid.length){result.hidden=false;result.innerHTML='<div class="trade-inline-alert">No se ha reconocido ningún cromo de la lista que pide la otra persona.</div>';return;}const target=getTarget(),analysed=parsed.found.map(item=>{const owned=Number(inventory?.[item.team]?.[item.internalCode])||0;return {...item,owned,available:Math.max(0,owned-target)};}),available=analysed.filter(x=>x.available>0),safeAvailable=available.filter(x=>!isTradeStar(x)&&!isTradeProtected(x)),previewItems=safeAvailable.map(item=>({...item,selectedUnits:item.available})),previewUnits=previewItems.reduce((sum,item)=>sum+(item.selectedUnits||0),0);result.innerHTML=`<button id="editTradeAnalyzerList" class="trade-back-button" type="button">← Editar lista</button><div class="trade-clean-card"><div class="trade-clean-status"><strong>${analysed.length} cromos detectados</strong>${parsed.invalid.length?`<span>${parsed.invalid.length} ${parsed.invalid.length===1?"línea no entendida":"líneas no entendidas"}</span>`:""}</div>${parsed.invalid.length?`<div class="trade-inline-alert">${renderInvalidLines(parsed.invalid)}</div>`:""}${safeAvailable.length?`<details class="trade-offer-preview" open><summary>Ver lo que puedes ofrecer · ${previewUnits}</summary><div class="balanced-sticker-list">${renderBalancedStickerList(previewItems)}</div></details>`:""}<button id="copyTradeAnalyzerAll" class="primary trade-main-action" type="button" ${safeAvailable.length?"":"disabled"}>Copiar lo que puedes ofrecer</button><button id="prepareBalancedTrade" class="secondary trade-main-action" type="button" ${safeAvailable.length?"":"disabled"}>Preparar intercambio</button></div>`;result.hidden=false;dialog?.classList.add("analyzed");dialog?.classList.remove("exchange-step");$("#tradeAnalyzerEntry").hidden=true;$("#tradeAnalyzerBody")?.scrollTo({top:0,behavior:"auto"});$("#editTradeAnalyzerList")?.addEventListener("click",editTradeAnalyzerList);wireInvalidCorrections(result);$("#copyTradeAnalyzerAll")?.addEventListener("click",async event=>{const fb=actionFeedback(event.currentTarget,{busy:"Copiando…",done:"Copiado ✓"});try{await copyShareText(tradeCopyLines(safeAvailable).join("\n"));fb.success();}catch{fb.fail("Error");}});$("#prepareBalancedTrade")?.addEventListener("click",()=>renderExchangeStep(safeAvailable));}
 function openTradeAnalyzer(){const dialog=$("#tradeAnalyzerDialog");if(!dialog)return;dialog.classList.remove("analyzed","exchange-step");$("#tradeAnalyzerEntry").hidden=false;$("#tradeAnalyzerResult").hidden=true;if(!dialog.open)dialog.showModal();$("#tradeAnalyzerBody")?.scrollTo({top:0,behavior:"auto"});setTimeout(()=>$("#tradeAnalyzerInput")?.focus(),80);}
@@ -1141,7 +1160,7 @@ function renderGlobalCollection(){
 }
 function calculateProjectStatistics(){
  const target=getTarget();
- let total=0,missing=0,repeats=0,shiny=0,fwc=0,badges=0,complete=0;
+ let total=0,missing=0,repeats=0,shiny=0,fwc=0,badges=0,collaboration=0,complete=0;
  Object.entries(inventory).forEach(([team,stickers])=>{
    let teamComplete=true;
    Object.entries(stickers).forEach(([code,raw])=>{
@@ -1151,12 +1170,13 @@ function calculateProjectStatistics(){
      repeats+=Math.max(0,qty-target);
      if(qty<target)teamComplete=false;
      if(team==="FWC"){shiny+=qty;fwc+=qty}
+     else if(team==="Coca-Cola"){collaboration+=qty}
      else if(code==="01"){shiny+=qty;badges+=qty}
    });
    if(teamComplete)complete++;
  });
- const required=Object.keys(inventory).length*20*target;
- return {total,missing,repeats,shiny,fwc,badges,complete,progress:required?Math.min(100,Math.round((total-mathExcessForProgress())/required*100)):0};
+ const required=Object.values(inventory).reduce((sum,stickers)=>sum+Object.keys(stickers).length,0)*target;
+ return {total,missing,repeats,shiny,fwc,badges,collaboration,complete,progress:required?Math.min(100,Math.round((total-mathExcessForProgress())/required*100)):0};
 }
 function mathExcessForProgress(){
  const target=getTarget();
@@ -1173,6 +1193,7 @@ function renderStatistics(){
    statsProgress:`${s.progress}%`,
    statsFwcTotal:s.fwc.toLocaleString("es-ES"),
    statsBadgesTotal:s.badges.toLocaleString("es-ES"),
+   statsCollaborationTotal:s.collaboration.toLocaleString("es-ES"),
    statsCompleteTeamsText:`${s.complete} selecciones completas`
  };
  Object.entries(values).forEach(([id,value])=>{const node=$("#"+id);if(node)node.textContent=value});

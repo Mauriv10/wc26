@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="World Cup 2026">
-  <title>World Cup 2026 · Build 704.5.2</title>
+  <title>World Cup 2026 · Build 704.6</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="canonical" href="https://mauriv10.github.io/wc26/">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/world-cup-2026-apple-v522.png">
@@ -190,6 +190,7 @@
       <button class="collection-filter-button" data-collection-filter="missing">Me faltan</button>
       <button class="collection-filter-button" data-collection-filter="repeats">Repetidos</button>
       <button class="collection-filter-button" data-collection-filter="shiny">Brillantes</button>
+      <button class="collection-filter-button" data-collection-filter="collaboration">Colaboración</button>
     </div>
     <button id="shareCollectionListButton" class="share-collection-list-button" type="button" hidden aria-label="Compartir lista">
       <span aria-hidden="true">↗</span><strong>Compartir</strong>
@@ -296,9 +297,13 @@
       <span class="stat-icon">✦</span>
       <div><span>Brillantes</span><strong id="statsShinyTotal">0</strong><small>FWC y escudos</small></div>
     </article>
+    <article class="stat-card stat-purple">
+      <span class="stat-icon">🥤</span>
+      <div><span>Colaboración</span><strong id="statsCollaborationTotal">0</strong><small>Coca-Cola CC</small></div>
+    </article>
     <article class="stat-card stat-blue">
       <span class="stat-icon">✓</span>
-      <div><span>Completas</span><strong id="statsCompleteTeams">0</strong><small>de 49 categorías</small></div>
+      <div><span>Completas</span><strong id="statsCompleteTeams">0</strong><small>de 50 categorías</small></div>
     </article>
   </section>
 
@@ -572,7 +577,7 @@
       <summary class="settings-group-title"><span class="settings-glyph gray">i</span><div><strong>Información</strong><small>World Cup 2026</small></div><span class="settings-chevron">›</span></summary>
       <div class="settings-group-content">
         <div class="settings-info-list">
-          <div><span>Versión</span><strong>Build 704.5.2 · Cabecera premium</strong></div>
+          <div><span>Versión</span><strong>Build 704.6 · FWC y Coca-Cola</strong></div>
           <div><span>Modo</span><strong>Disponible offline</strong></div>
         </div>
       </div>

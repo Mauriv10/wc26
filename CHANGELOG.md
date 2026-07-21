@@ -1,3 +1,12 @@
+# Build 704.6
+
+- FWC usa sus códigos reales 00–19 en toda la app.
+- Nueva colección Coca-Cola con código CC y cromos 01–12.
+- Nueva categoría de intercambio: Colaboración.
+- Los escudos 01 y FWC siguen siendo Especiales.
+- Selector de selecciones a ancho completo, con FWC y Coca-Cola destacadas.
+- Migración automática de proyectos existentes sin borrar inventario.
+
 # Build 704.5.2
 
 - Corrige el selector «Elegir selección» en iPhone cuando aparece el teclado.

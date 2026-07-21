@@ -1,6 +1,6 @@
-window.WC26_CONFIG = {
-  version: "704.5.2",
-  build: "704.5.2",
-  label: "Mercat Workflow · Actualización y buscadores",
-  cacheName: "wc26-build-704-5-2"
+globalThis.WC26_CONFIG = {
+  version: "704.6",
+  build: "704.6",
+  label: "FWC real · Coca-Cola · categorías",
+  cacheName: "wc26-build-704-6"
 };
