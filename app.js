@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.7";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.8";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -1995,26 +1995,46 @@ function createProject(){
  const target=Math.max(1,Number($("#newProjectTarget").value)||1);
  if(!name){alert("Escribe un nombre para la colección.");return}
  const sourceType=document.querySelector('input[name="projectSource"]:checked')?.value||"empty";
+
+ // Guarda primero el estado visible de la colección activa. Así, si se usa como origen,
+ // el cálculo de repetidas parte siempre de las cantidades más recientes.
+ commitProjectStateLocalOnly();
+
  let inv=emptyInventory(),transfer=null,source=null;
  if(sourceType==="repeats"){
    source=projects[$("#sourceProjectSelect").value];
+   if(!source){alert("Selecciona una colección de origen.");return}
    const mode=document.querySelector('input[name="repeatMode"]:checked')?.value||"target";
    transfer=calculateTransfer(source,target,mode);inv=transfer.inventory;
-   if(!confirm(`Crear "${name}" transfiriendo ${transfer.units} cromos dla colección "${source.name}"?`))return;
+   if(!transfer.units){alert("La colección elegida no tiene repetidas disponibles para transferir.");return}
+   if(!confirm(`Crear "${name}" transfiriendo ${transfer.units} cromos de la colección "${source.name}"? Las unidades se descontarán del álbum de origen.`))return;
+   createAutomaticBackup("antes-de-transferir-repetidas");
  }
- if(sourceType==="repeats")createAutomaticBackup("antes-de-transferir-repetidas");
- const p=defaultProject(name,target,inv);
+
+ const p=defaultProject(name,target,inv,source?.seedType||projects[activeProjectId]?.seedType||"custom");
+ p.collectionOptions=structuredClone(source?.collectionOptions||projects[activeProjectId]?.collectionOptions||{collaborationEnabled:true});
  projects[p.id]=p;
+
  if(sourceType==="repeats"&&source){
    Object.entries(inv).forEach(([team,stickers])=>Object.entries(stickers).forEach(([code,qty])=>{
-     source.inventory[team][code]=Math.max(0,Number(source.inventory[team][code])-Number(qty));
+     const moved=Math.max(0,Number(qty)||0);
+     if(!moved)return;
+     source.inventory[team][code]=Math.max(0,(Number(source.inventory[team][code])||0)-moved);
    }));
+   source.updatedAt=new Date().toISOString();
  }
- commitProjectState();activeProjectId=p.id;persistProjects();$("#createProjectDialog").close();loadProjectState();renderProjectsList();
- showToast(`Colección creada: ${name}`);
+
+ activeProjectId=p.id;
+ persistProjects();
+ $("#createProjectDialog").close();
+ loadProjectState();
+ renderProjectsList();
+ renderCollections();
+ showToast(sourceType==="repeats"?`Colección creada · ${transfer.units} cromos transferidos`:`Colección creada: ${name}`);
 }
 $("#projectSelectorButton").onclick=()=>{renderProjectsList();$("#projectsDialog").showModal()};
 $("#newProjectQuickButton").onclick=openCreateProject;
+$("#createCollectionFromLibraryButton").onclick=openCreateProject;
 $("#closeProjectsDialog").onclick=()=>$("#projectsDialog").close();
 $("#createProjectButton").onclick=()=>{$("#projectsDialog").close();openCreateProject()};
 $("#closeCreateProjectDialog").onclick=()=>$("#createProjectDialog").close();

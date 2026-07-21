@@ -5179,3 +5179,11 @@ body.collaboration-disabled .stat-card.stat-purple,body.collaboration-disabled .
 .trade-manager-add-actions button{background:#fff!important;color:#1478e8!important;border-color:#cfd7e6!important;transition:transform .12s ease,background .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
 .trade-manager-add-actions button:active{transform:scale(.97);background:#eaf4ff!important;border-color:#1478e8!important}
 .trade-manager-add-actions button.is-confirmed{background:#1478e8!important;color:#fff!important;border-color:#1478e8!important;box-shadow:0 0 0 4px rgba(20,120,232,.14)}
+
+
+/* Build 704.8 · creación de colecciones */
+.clean-collections-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.collections-eyebrow{display:block;margin-bottom:4px;font-size:12px;font-weight:800;letter-spacing:.16em;color:#1677d2}
+.create-collection-library-button{border:0;border-radius:16px;padding:13px 17px;background:#147bea;color:#fff;font:inherit;font-weight:800;box-shadow:0 8px 22px rgba(20,123,234,.22);white-space:nowrap;transition:transform .12s ease,filter .12s ease}
+.create-collection-library-button:active{transform:scale(.96);filter:brightness(.94)}
+@media(max-width:560px){.clean-collections-header{align-items:stretch;flex-direction:column}.create-collection-library-button{width:100%;min-height:50px}}

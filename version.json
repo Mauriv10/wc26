@@ -1,6 +1,3 @@
 {
-  "version": "704.7.1",
-  "name": "Correcciones visuales CC y protegidos",
-  "released": "2026-07-21",
-  "notes": "Icono Coca-Cola en cabecera, cierre del selector alineado y botones neutros con feedback en favoritos/protegidos."
+  "version": "704.8"
 }
