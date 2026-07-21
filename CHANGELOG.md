@@ -1,3 +1,11 @@
+# Build 704.6.1
+
+- La lista «Lo que puedes ofrecer» limita cada cromo a la cantidad solicitada por la otra persona.
+- Si pide una unidad, se ofrece una sola aunque existan varias repetidas disponibles.
+- Si indica una cantidad con `xN`, se ofrece como máximo esa cantidad y nunca más de las unidades disponibles.
+- El mismo límite se conserva al copiar, preparar y completar el intercambio.
+- No se modifican la barra inferior, el scroll ni las categorías FWC/CC.
+
 # Build 704.6
 
 - FWC usa sus códigos reales 00–19 en toda la app.
