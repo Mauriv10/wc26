@@ -414,18 +414,26 @@ function populateTeams(){
 }
 
 function updateCurrentTeamUI(){
- const team=teamSelect.value||"all";
+ const team=teamSelect.value||"all",flag=$("#currentTeamFlag"),emoji=$("#currentTeamEmoji");
  if(team==="all"){
    $("#currentTeamName").textContent="Todas las selecciones";
-   $("#currentTeamFlag").removeAttribute("src");
-   $("#currentTeamFlag").alt="Todas";
-   $("#currentTeamFlag").style.display="none";
+   flag.removeAttribute("src");
+   flag.alt="Todas";
+   flag.style.display="none";
+   if(emoji){emoji.hidden=true;emoji.textContent="";}
    return;
  }
  $("#currentTeamName").textContent=team;
- $("#currentTeamFlag").style.display="";
- $("#currentTeamFlag").src=flags[team]||"";
- $("#currentTeamFlag").alt=team;
+ if(team==="Coca-Cola"){
+   flag.removeAttribute("src");
+   flag.style.display="none";
+   if(emoji){emoji.textContent="🥤";emoji.hidden=false;}
+   return;
+ }
+ if(emoji){emoji.hidden=true;emoji.textContent="";}
+ flag.style.display="";
+ flag.src=flags[team]||"";
+ flag.alt=team;
 }
 function selectTeam(team){
  collectionTeamFilter=team&&inventory[team]?team:"all";
@@ -2434,16 +2442,19 @@ function openTradeProtectionManager(){
  if($("#settingsDialog")?.open)$("#settingsDialog").close();
  dialog.showModal();
 }
-function addTradeProtectionFromManager(type){
+function addTradeProtectionFromManager(type,button){
  const team=$("#tradeProtectionTeam")?.value,internalCode=$("#tradeProtectionNumber")?.value;if(!team||!internalCode)return;
  const item={team,officialCode:TEAM_TO_PANINI_CODE[team]||team,displayCode:paniniDisplayCode(team,internalCode),internalCode};
- setTradeMark(tradeStickerKey(item),type,true);renderTradeProtectionManager();renderTradeProtectionSettings();showToast(type==="stars"?"Añadido a favoritos":"Protegido para intercambios");
+ setTradeMark(tradeStickerKey(item),type,true);renderTradeProtectionManager();renderTradeProtectionSettings();
+ if(button){button.classList.remove("is-confirmed");void button.offsetWidth;button.classList.add("is-confirmed");setTimeout(()=>button.classList.remove("is-confirmed"),500);}
+ if(navigator.vibrate)navigator.vibrate(18);
+ showToast(type==="stars"?"Añadido a favoritos":"Protegido para intercambios");
 }
 
 $("#closeTradeProtectionManager")?.addEventListener("click",()=>$("#tradeProtectionManagerDialog")?.close());
 $("#tradeProtectionSearch")?.addEventListener("input",renderTradeProtectionManager);
-$("#addTradeFavorite")?.addEventListener("click",()=>addTradeProtectionFromManager("stars"));
-$("#addTradeProtected")?.addEventListener("click",()=>addTradeProtectionFromManager("protected"));
+$("#addTradeFavorite")?.addEventListener("click",event=>addTradeProtectionFromManager("stars",event.currentTarget));
+$("#addTradeProtected")?.addEventListener("click",event=>addTradeProtectionFromManager("protected",event.currentTarget));
 $("#openTradeProtectionManagerButton")?.addEventListener("click",openTradeProtectionManager);
 
 function setupSettingsCenter(){
