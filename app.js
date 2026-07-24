@@ -1,9 +1,29 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.8.2";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.9";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
 const PROJECTS_KEY="world-cup-2026-projects-v600";
 const ACTIVE_PROJECT_KEY="world-cup-2026-active-project-v600";
+
+const EXTRA_PLAYERS=[
+ "Lionel Messi","Cristiano Ronaldo","Lamine Yamal","Kylian Mbappé","Erling Haaland",
+ "Vinícius Júnior","Jude Bellingham","Federico Valverde","Luka Modric","Achraf Hakimi",
+ "Luis Díaz","Mohamed Salah","Heungmin Son","Jérémy Doku","Florian Wirtz",
+ "Moisés Caicedo","Alphonso Davies","Cody Gakpo","Christian Pulisic","Raúl Jiménez"
+];
+const EXTRA_VARIANTS=[
+ {key:"epic",team:"Extra · Epic",label:"Epic",icon:"🟣",code:"EPI"},
+ {key:"bronze",team:"Extra · Bronce",label:"Bronce",icon:"🟤",code:"BRO"},
+ {key:"silver",team:"Extra · Plata",label:"Plata",icon:"⚪",code:"PLA"},
+ {key:"gold",team:"Extra · Oro",label:"Oro",icon:"🟡",code:"ORO"}
+];
+const EXTRA_TEAMS=EXTRA_VARIANTS.map(item=>item.team);
+function isExtraTeam(team){return EXTRA_TEAMS.includes(team)}
+function extraVariantForTeam(team){return EXTRA_VARIANTS.find(item=>item.team===team)||null}
+function extraPlayerName(code){return EXTRA_PLAYERS[Math.max(0,Number(code)-1)]||String(code)}
+function stickerDisplayLabel(team,code){return isExtraTeam(team)?extraPlayerName(code):code}
+function stickerFeedbackLabel(team,code){return isExtraTeam(team)?`${extraVariantForTeam(team)?.label||"Extra"} · ${extraPlayerName(code)}`:`${team} ${code}`}
+
 const LEGACY_KEYS={
  inventory:"panini-mercat-inventory-v423",
  team:"panini-mercat-team-v3",
@@ -52,15 +72,21 @@ function projectTeamOrder(project=projects?.[activeProjectId],sourceInventory=pr
  const seen=new Set();
  return [...preferred,...available].filter(team=>available.includes(team)&&!seen.has(team)&&seen.add(team));
 }
-function currentCollectionOptions(){
- const project=projects?.[activeProjectId];
- if(!project)return {collaborationEnabled:true};
+function currentCollectionOptions(project=projects?.[activeProjectId]){
+ if(!project)return {collaborationEnabled:true,extra:{epic:false,bronze:false,silver:false,gold:false}};
  project.collectionOptions=project.collectionOptions||{collaborationEnabled:true};
  if(typeof project.collectionOptions.collaborationEnabled!=="boolean")project.collectionOptions.collaborationEnabled=true;
+ project.collectionOptions.extra={epic:false,bronze:false,silver:false,gold:false,...(project.collectionOptions.extra||{})};
  return project.collectionOptions;
 }
-function collaborationEnabled(){return currentCollectionOptions().collaborationEnabled!==false}
-function currentTeamOrder(){return projectTeamOrder(projects?.[activeProjectId],inventory).filter(team=>team!=="Coca-Cola"||collaborationEnabled())}
+function collaborationEnabled(project=projects?.[activeProjectId]){return currentCollectionOptions(project).collaborationEnabled!==false}
+function extraVariantEnabled(key,project=projects?.[activeProjectId]){return currentCollectionOptions(project).extra?.[key]===true}
+function teamVisibleForProject(team,project=projects?.[activeProjectId]){
+ if(team==="Coca-Cola")return collaborationEnabled(project);
+ const variant=extraVariantForTeam(team);
+ return variant?extraVariantEnabled(variant.key,project):true;
+}
+function currentTeamOrder(){return projectTeamOrder(projects?.[activeProjectId],inventory).filter(team=>teamVisibleForProject(team))}
 function ensureProjectInventorySchema(project){
  if(!project||!project.inventory)return;
  // FWC se mostraba antiguamente como 01–20. La app usa ahora los códigos reales 00–19.
@@ -73,6 +99,10 @@ function ensureProjectInventorySchema(project){
  // Coca-Cola es una colección independiente de colaboración, CC01–CC12.
  if(!project.inventory["Coca-Cola"])project.inventory["Coca-Cola"]=Object.fromEntries(Array.from({length:12},(_,i)=>[String(i+1).padStart(2,"0"),0]));
  else for(let n=1;n<=12;n++){const code=String(n).padStart(2,"0");if(!Object.prototype.hasOwnProperty.call(project.inventory["Coca-Cola"],code))project.inventory["Coca-Cola"][code]=0;}
+ EXTRA_VARIANTS.forEach(({team})=>{
+   if(!project.inventory[team])project.inventory[team]=Object.fromEntries(EXTRA_PLAYERS.map((_,i)=>[String(i+1).padStart(2,"0"),0]));
+   else EXTRA_PLAYERS.forEach((_,i)=>{const code=String(i+1).padStart(2,"0");if(!Object.prototype.hasOwnProperty.call(project.inventory[team],code))project.inventory[team][code]=0;});
+ });
 }
 function ensureProjectTeamOrder(project){
  if(!project)return;
@@ -424,10 +454,10 @@ function updateCurrentTeamUI(){
    return;
  }
  $("#currentTeamName").textContent=team;
- if(team==="Coca-Cola"){
+ if(team==="Coca-Cola"||isExtraTeam(team)){
    flag.removeAttribute("src");
    flag.style.display="none";
-   if(emoji){emoji.textContent="🥤";emoji.hidden=false;}
+   if(emoji){emoji.textContent=team==="Coca-Cola"?"🥤":(extraVariantForTeam(team)?.icon||"✨");emoji.hidden=false;}
    return;
  }
  if(emoji){emoji.hidden=true;emoji.textContent="";}
@@ -449,9 +479,13 @@ function renderTeamList(teams){
  const worldButton=`<button class="team-option world-option" data-team="all">
    <span class="team-option-world-icon">🌍</span><strong>Todas las selecciones</strong>
  </button>`;
- const pinned=["FWC","Coca-Cola"].filter(team=>teams.includes(team));
+ const pinned=["FWC","Coca-Cola",...EXTRA_TEAMS].filter(team=>teams.includes(team));
  const regular=teams.filter(team=>!pinned.includes(team));
- const categoryButtons=pinned.map(team=>`<button class="team-option featured-team-option" data-team="${team}"><span class="team-option-world-icon">${TEAM_FLAG_EMOJI[team]||""}</span><strong>${team==="Coca-Cola"?"Coca-Cola · CC":team+" · Especiales"}</strong></button>`).join("");
+ const categoryButtons=pinned.map(team=>{
+   const variant=extraVariantForTeam(team);
+   const label=team==="Coca-Cola"?"Coca-Cola · CC":team==="FWC"?"FWC · Especiales":`Extra Stickers · ${variant.label}`;
+   return `<button class="team-option featured-team-option ${variant?`extra-option extra-${variant.key}`:""}" data-team="${team}"><span class="team-option-world-icon">${TEAM_FLAG_EMOJI[team]||variant?.icon||""}</span><strong>${label}</strong></button>`;
+ }).join("");
  $("#teamList").innerHTML=worldButton+categoryButtons+regular.map(team=>`<button class="team-option" data-team="${team}">${flagHTML(team)}<strong>${team}</strong></button>`).join("");
  $("#teamList").querySelectorAll("button").forEach(button=>button.onclick=()=>{
    selectTeam(button.dataset.team);
@@ -474,7 +508,7 @@ function createCard(team,code,qty){
  card.dataset.code=code;
  card.innerHTML=`
    <div class="sticker-main">
-     <div class="sticker-number">${code}</div>
+     <div class="sticker-number ${isExtraTeam(team)?"extra-player-name":""}">${stickerDisplayLabel(team,code)}</div>
      <div class="sticker-meta">
        <span class="sticker-stock-label">Stock</span>
        <strong class="sticker-stock-value">x${qty}</strong>
@@ -503,7 +537,7 @@ function createCard(team,code,qty){
    const next=isExchange?getExchangeQty("give",team,code)+1:Math.max(0,(Number(inventory[team][code])||0)-1);
    showTopFeedback({
      type:isExchange?"exchange":"negative",
-     title:`${team} ${code} ${isExchange?"preparado para dar":"eliminado"}`,
+     title:`${stickerFeedbackLabel(team,code)} ${isExchange?"preparado para dar":"eliminado"}`,
      detail:isExchange?`Marcados: x${next}`:`Inventario: x${next}`,
      key:`${isExchange?"give":"minus"}:${team}:${code}`
    });
@@ -516,7 +550,7 @@ function createCard(team,code,qty){
    const next=isExchange?getExchangeQty("receive",team,code)+1:(Number(inventory[team][code])||0)+1;
    showTopFeedback({
      type:isExchange?"exchange":"positive",
-     title:`${team} ${code} ${isExchange?"preparado para recibir":"añadido"}`,
+     title:`${stickerFeedbackLabel(team,code)} ${isExchange?"preparado para recibir":"añadido"}`,
      detail:isExchange?`Marcados: x${next}`:`Inventario: x${next}`,
      key:`${isExchange?"receive":"plus"}:${team}:${code}`
    });
@@ -526,7 +560,7 @@ function createCard(team,code,qty){
  return card;
 }
 
-function isCurrentAlbumComplete(){const target=getTarget();return Object.values(inventory||{}).every(stickers=>Object.values(stickers||{}).every(qty=>Number(qty)>=target));}
+function isCurrentAlbumComplete(){const target=getTarget();return currentTeamOrder().every(team=>Object.values(inventory?.[team]||{}).every(qty=>Number(qty)>=target));}
 function checkAlbumCompletion(previouslyComplete=false){
  const project=projects?.[activeProjectId];if(!project)return;project.ui=project.ui||{};
  const nowComplete=isCurrentAlbumComplete(),key=`${getTarget()}`;
@@ -548,7 +582,7 @@ function changeQuantity(team,code,delta,button){
  card?.classList.add(delta>0?"flash-card-plus":"flash-card-minus");
  setTimeout(()=>card?.classList.remove("flash-card-plus","flash-card-minus"),430);
  renderAll();checkAlbumCompletion(wasComplete);
- showToast(`✓ ${team} ${code} actualizado · x${next}`);
+ showToast(`✓ ${stickerFeedbackLabel(team,code)} actualizado · x${next}`);
 }
 function matchesFilter(qty){
  const kind=stateFor(qty).kind;
@@ -573,7 +607,7 @@ function updateSettingsTargetUI(){
 function updateGlobalDashboard(){
  const target=getTarget();
  let total=0,missing=0,repeats=0;
- Object.values(inventory).forEach(stickers=>{
+ currentTeamOrder().forEach(team=>{const stickers=inventory[team]||{};
    Object.values(stickers).forEach(raw=>{
      const qty=Number(raw)||0;
      total+=qty;
@@ -704,7 +738,7 @@ function createGlobalSticker(team,code,qty){
  const staged=giveQty||receiveQty;
  item.className=`collection-sticker ${state.kind} ${isShinySticker(team,code)?"shiny":""} ${staged?"exchange-staged":""}`;
  const exchangeMode=currentView==="exchange";
- item.innerHTML=`<div><span class="collection-sticker-code">${code}</span><div class="collection-sticker-qty">x${qty}</div></div>
+ item.innerHTML=`<div><span class="collection-sticker-code ${isExtraTeam(team)?"extra-player-name":""}">${stickerDisplayLabel(team,code)}</span><div class="collection-sticker-qty">x${qty}</div></div>
  <div class="collection-sticker-actions ${exchangeMode?"exchange-actions":""}">
    ${exchangeMode
      ? `${currentFilter!=="need"?`<button class="give-global" data-type="give">DAR${giveQty?` <small>✓x${giveQty}</small>`:""}</button>`:"<span></span>"}
@@ -723,7 +757,7 @@ function createGlobalSticker(team,code,qty){
      showActionFeedback(button,type,type==="give"?"DAR ✓":"RECIBIR ✓");
      showTopFeedback({
        type:"exchange",
-       title:`${team} ${code}`,
+       title:stickerFeedbackLabel(team,code),
        detail:type==="give"?`Preparado para dar · x${current+1}`:`Preparado para recibir · x${current+1}`,
        key:`${type}:${team}:${code}`
      });
@@ -744,7 +778,7 @@ function createGlobalSticker(team,code,qty){
      showActionFeedback(button,delta>0?"plus":"minus",delta>0?"+1":"−1");
      showTopFeedback({
        type:delta>0?"positive":"negative",
-       title:`${team} ${code} ${delta>0?"añadido":"eliminado"}`,
+       title:`${stickerFeedbackLabel(team,code)} ${delta>0?"añadido":"eliminado"}`,
        detail:`Inventario: x${next}`,
        key:`${delta>0?"plus":"minus"}:${team}:${code}`
      });
@@ -780,11 +814,11 @@ const TEAM_FLAG_EMOJI={
  "Argentina":"🇦🇷","Argelia":"🇩🇿","Austria":"🇦🇹","Jordania":"🇯🇴",
  "Portugal":"🇵🇹","RD Congo":"🇨🇩","Uzbekistán":"🇺🇿","Colombia":"🇨🇴",
  "Inglaterra":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croacia":"🇭🇷","Ghana":"🇬🇭","Panamá":"🇵🇦",
- "FWC":"⭐","Coca-Cola":"🥤"
+ "FWC":"⭐","Coca-Cola":"🥤","Extra · Epic":"🟣","Extra · Bronce":"🟤","Extra · Plata":"⚪","Extra · Oro":"🟡"
 };
 
 const PANINI_TEAM_CODES={
- "FWC":"FWC","CC":"Coca-Cola","MEX":"México","RSA":"Sudáfrica","KOR":"Corea del Sur","CZE":"Chequia",
+ "FWC":"FWC","CC":"Coca-Cola","EPI":"Extra · Epic","BRO":"Extra · Bronce","PLA":"Extra · Plata","ORO":"Extra · Oro","MEX":"México","RSA":"Sudáfrica","KOR":"Corea del Sur","CZE":"Chequia",
  "CAN":"Canadá","BIH":"Bosnia y Herzegovina","QAT":"Catar","SUI":"Suiza",
  "BRA":"Brasil","MAR":"Marruecos","HAI":"Haití","SCO":"Escocia",
  "USA":"Estados Unidos","PAR":"Paraguay","AUS":"Australia","TUR":"Turquía",
@@ -1170,7 +1204,7 @@ function renderGlobalCollection(){
    const section=document.createElement("section");
    section.className="collection-team";
    section.innerHTML=`<header class="collection-team-header">
-     <div class="collection-team-title">${flagHTML(team)}<strong>${team}</strong></div>
+     <div class="collection-team-title">${flagHTML(team)}<strong>${isExtraTeam(team)?`Extra Stickers · ${extraVariantForTeam(team).label}`:team}</strong></div>
      <div class="collection-team-summary"><strong>${total} cromos</strong>${missing?`${missing} pendientes`:"Completa"}</div>
    </header><div class="collection-stickers-grid"></div>`;
    const grid=section.querySelector(".collection-stickers-grid");
@@ -1854,8 +1888,7 @@ function projectStats(p){
 function albumWord(value){return Number(value)===1?"álbum":"álbumes"}
 function collectionProgress(p){
  const target=Math.max(1,Number(p.target)||1);
- const collaborationVisible=p?.collectionOptions?.collaborationEnabled!==false;
- const teams=projectTeamOrder(p,p?.inventory||{}).filter(team=>team!=="Coca-Cola"||collaborationVisible);
+ const teams=projectTeamOrder(p,p?.inventory||{}).filter(team=>teamVisibleForProject(team,p));
  let useful=0,total=0,different=0,pending=0,required=0;
  teams.forEach(team=>{
    const stickers=p?.inventory?.[team]||{};
@@ -1943,6 +1976,27 @@ function deleteEditedCollection(){
    delete projects[id];activeProjectId=replacement;persistProjects();loadProjectState();
  }else{delete projects[id];persistProjects()}
  renderAll();renderProjectsList();closeEditCollection();showToast("Colección eliminada");
+}
+
+function emptyEditedCollection(){
+ const id=$("#editCollectionId").value,p=projects[id];if(!p)return;
+ if(!confirm(`¿Vaciar todo el stock de “${p.name}”? Se pondrán a 0 todas las referencias, incluidas las colecciones opcionales ocultas.`))return;
+ createAutomaticBackup("antes-de-vaciar-colección");
+ if(id===activeProjectId)commitProjectState();
+ Object.values(p.inventory||{}).forEach(stickers=>Object.keys(stickers||{}).forEach(code=>stickers[code]=0));
+ p.history=[];p.pendingSync={};p.exchange={give:{},receive:{}};p.sessionStats={plus:0,minus:0,startedAt:new Date().toISOString()};
+ persistProjects();if(id===activeProjectId)loadProjectState();renderAll();renderProjectsList();closeEditCollection();showToast("Colección vaciada");
+}
+function completeOneAlbumEditedCollection(){
+ const id=$("#editCollectionId").value,p=projects[id];if(!p)return;
+ const visibleTeams=projectTeamOrder(p,p.inventory||{}).filter(team=>teamVisibleForProject(team,p));
+ const missing=visibleTeams.reduce((sum,team)=>sum+Object.values(p.inventory[team]||{}).filter(q=>Number(q)<1).length,0);
+ if(!missing){showToast("Este álbum ya tiene al menos una unidad de cada referencia activa");return;}
+ if(!confirm(`¿Completar 1 álbum de “${p.name}”? Se añadirá una unidad a las ${missing} referencias activas que estén a 0. Las repetidas actuales se conservarán.`))return;
+ createAutomaticBackup("antes-de-completar-un-álbum");
+ if(id===activeProjectId)commitProjectState();
+ visibleTeams.forEach(team=>Object.keys(p.inventory[team]||{}).forEach(code=>{if(Number(p.inventory[team][code])<1)p.inventory[team][code]=1;}));
+ persistProjects();if(id===activeProjectId)loadProjectState();renderAll();renderProjectsList();closeEditCollection();showToast("Álbum completado con 1 unidad por referencia");
 }
 
 function renderProjectsList(){
@@ -2441,13 +2495,22 @@ function renderTradeProtectionSettings(){
 }
 function renderCollectionModuleSettings(){
  const root=$("#collectionModuleSettings");if(!root)return;
- root.innerHTML=`<label class="settings-toggle-row"><span><strong>Coca-Cola · CC</strong><small>Mostrar la colaboración CC01–CC12 en toda la app</small></span><input id="toggleCollaborationCollection" type="checkbox" ${collaborationEnabled()?"checked":""}></label>`;
+ const options=currentCollectionOptions();
+ root.innerHTML=`<label class="settings-toggle-row"><span><strong>Coca-Cola · CC</strong><small>Mostrar la colaboración CC01–CC12 en toda la app</small></span><input id="toggleCollaborationCollection" type="checkbox" ${collaborationEnabled()?"checked":""}></label>
+ <div class="optional-collection-group"><div class="optional-collection-heading"><strong>✨ Extra Stickers</strong><small>Activa únicamente los acabados que quieras coleccionar</small></div>
+ ${EXTRA_VARIANTS.map(v=>`<label class="settings-toggle-row extra-toggle-row"><span><strong>${v.icon} ${v.label}</strong><small>20 futbolistas</small></span><input type="checkbox" data-extra-variant="${v.key}" ${options.extra[v.key]?"checked":""}></label>`).join("")}</div>`;
  $("#toggleCollaborationCollection")?.addEventListener("change",event=>{
    currentCollectionOptions().collaborationEnabled=event.currentTarget.checked;
    if(!event.currentTarget.checked&&collectionTeamFilter==="Coca-Cola")collectionTeamFilter="all";
    persistProjects();populateTeams();renderAll();renderCollectionModuleSettings();updateOptionalCollectionVisibility();
    showToast(event.currentTarget.checked?"Coca-Cola activada":"Coca-Cola ocultada");
  });
+ root.querySelectorAll("[data-extra-variant]").forEach(input=>input.addEventListener("change",event=>{
+   const key=event.currentTarget.dataset.extraVariant;currentCollectionOptions().extra[key]=event.currentTarget.checked;
+   const team=EXTRA_VARIANTS.find(v=>v.key===key)?.team;if(!event.currentTarget.checked&&collectionTeamFilter===team)collectionTeamFilter="all";
+   persistProjects();populateTeams();renderAll();renderCollectionModuleSettings();updateOptionalCollectionVisibility();
+   showToast(`${EXTRA_VARIANTS.find(v=>v.key===key)?.label} ${event.currentTarget.checked?"activado":"ocultado"}`);
+ }));
 }
 function updateOptionalCollectionVisibility(){document.body.classList.toggle("collaboration-disabled",!collaborationEnabled())}
 function tradeManagerTeamOptions(){return currentTeamOrder().map(team=>`<option value="${escapeTradeHtml(team)}">${escapeTradeHtml(team)}</option>`).join("")}
@@ -2755,6 +2818,8 @@ document.addEventListener("DOMContentLoaded",()=>{
  $("#editTargetMinus")?.addEventListener("click",()=>changeEditTarget(-1));
  $("#editTargetPlus")?.addEventListener("click",()=>changeEditTarget(1));
  $("#duplicateCollectionButton")?.addEventListener("click",duplicateEditedCollection);
+ $("#emptyCollectionButton")?.addEventListener("click",emptyEditedCollection);
+ $("#completeOneAlbumButton")?.addEventListener("click",completeOneAlbumEditedCollection);
  $("#deleteCollectionButton")?.addEventListener("click",deleteEditedCollection);
  $("#editCollectionDialog")?.addEventListener("click",event=>{if(event.target===$("#editCollectionDialog"))closeEditCollection()});
 });
