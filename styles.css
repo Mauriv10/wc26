@@ -5199,25 +5199,30 @@ body.collaboration-disabled .stat-card.stat-purple,body.collaboration-disabled .
 .collection-stock-tools button small{font-size:12px;font-weight:600;color:#7b8494}
 .collection-stock-tools button.danger-soft{background:#fff8f8;border-color:#ffd7d7;color:#c83a3a}
 
-
-/* Build 704.9.1 · scroll único en Ajustes para Safari iOS */
+/* Build 704.9.2 · scroll único y estable en Ajustes para Safari/iPhone */
 .settings-center[open]{
   display:block!important;
+  width:100%!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  max-height:100dvh!important;
   overflow-y:auto!important;
   overflow-x:hidden!important;
   -webkit-overflow-scrolling:touch!important;
   overscroll-behavior-y:contain!important;
   touch-action:pan-y!important;
+  padding:0!important;
 }
-.settings-center[open] .settings-sheet-header{
+.settings-center .settings-sheet-header{
   position:sticky!important;
   top:0!important;
-  z-index:20!important;
+  z-index:30!important;
 }
-.settings-center[open] .settings-groups{
+.settings-center .settings-groups{
   display:grid!important;
+  height:auto!important;
   min-height:auto!important;
+  max-height:none!important;
   overflow:visible!important;
-  touch-action:auto!important;
   padding-bottom:calc(48px + env(safe-area-inset-bottom))!important;
 }

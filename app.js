@@ -1,4 +1,4 @@
-const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.9.1";
+const APP_VERSION=globalThis.WC26_CONFIG?.version||"704.9.2";
 const DATA_SCHEMA_VERSION=2;
 const DATA_REVISION="2026-07-17-collections-v70111";
 const MASTER_SEED_KEY="world-cup-2026-master-seed-revision";
@@ -2114,8 +2114,63 @@ $("#sourceProjectSelect").onchange=updateTransferPreview;
 $("#newProjectTarget").oninput=updateTransferPreview;
 
 
-
-
+/* Build 704.9.2 · estabilización de creación de proyectos con HTML legado duplicado */
+function createProjectFromDialog(dialog){
+ if(!dialog)return;
+ const local=selector=>dialog.querySelector(selector);
+ const name=(local("#newProjectName")?.value||"").trim();
+ const target=Math.max(1,Number(local("#newProjectTarget")?.value)||1);
+ if(!name){alert("Escribe un nombre para la colección.");return}
+ const sourceType=local('input[name="projectSource"]:checked')?.value||"empty";
+ commitProjectStateLocalOnly();
+ let inv=emptyInventory(),transfer=null,source=null;
+ if(sourceType==="repeats"){
+   source=projects[local("#sourceProjectSelect")?.value];
+   if(!source){alert("Selecciona una colección de origen.");return}
+   const mode=local('input[name="repeatMode"]:checked')?.value||"target";
+   transfer=calculateTransfer(source,target,mode);inv=transfer.inventory;
+   if(!transfer.units){alert("La colección elegida no tiene repetidas disponibles para transferir.");return}
+   if(!confirm(`Crear "${name}" transfiriendo ${transfer.units} cromos de la colección "${source.name}"? Las unidades se descontarán del álbum de origen.`))return;
+   createAutomaticBackup("antes-de-transferir-repetidas");
+ }
+ const p=defaultProject(name,target,inv,source?.seedType||projects[activeProjectId]?.seedType||"custom");
+ p.collectionOptions=structuredClone(source?.collectionOptions||projects[activeProjectId]?.collectionOptions||{collaborationEnabled:true,extra:{epic:false,bronze:false,silver:false,gold:false}});
+ projects[p.id]=p;
+ if(sourceType==="repeats"&&source){
+   Object.entries(inv).forEach(([team,stickers])=>Object.entries(stickers).forEach(([code,qty])=>{
+     const moved=Math.max(0,Number(qty)||0);if(!moved)return;
+     source.inventory[team][code]=Math.max(0,(Number(source.inventory[team][code])||0)-moved);
+   }));
+   source.updatedAt=new Date().toISOString();
+ }
+ activeProjectId=p.id;persistProjects();dialog.close();loadProjectState();renderProjectsList();renderCollections();
+ showToast(sourceType==="repeats"?`Colección creada · ${transfer.units} cromos transferidos`:`Colección creada: ${name}`);
+}
+function updateTransferPreviewInDialog(dialog){
+ if(!dialog)return;
+ const local=selector=>dialog.querySelector(selector),repeatOptions=local("#repeatOptions"),preview=local("#transferPreview");
+ if(!repeatOptions||repeatOptions.hidden)return;
+ const source=projects[local("#sourceProjectSelect")?.value];
+ const target=Math.max(1,Number(local("#newProjectTarget")?.value)||1);
+ const mode=local('input[name="repeatMode"]:checked')?.value||"target";
+ if(!source||!preview)return;
+ const result=calculateTransfer(source,target,mode);
+ preview.innerHTML=`Se transferirán <strong>${result.units}</strong> cromos de <strong>${result.refs}</strong> referencias.`;
+}
+function bindAllCreateProjectDialogs(){
+ document.querySelectorAll("#createProjectDialog").forEach(dialog=>{
+   dialog.querySelectorAll("#confirmCreateProjectButton").forEach(button=>button.onclick=()=>createProjectFromDialog(dialog));
+   dialog.querySelectorAll("#closeCreateProjectDialog").forEach(button=>button.onclick=()=>dialog.close());
+   dialog.querySelectorAll('input[name="projectSource"]').forEach(radio=>radio.onchange=()=>{
+     const repeatOptions=dialog.querySelector("#repeatOptions");if(repeatOptions)repeatOptions.hidden=radio.value!=="repeats"||!radio.checked;
+     updateTransferPreviewInDialog(dialog);
+   });
+   dialog.querySelectorAll('input[name="repeatMode"]').forEach(radio=>radio.onchange=()=>updateTransferPreviewInDialog(dialog));
+   dialog.querySelector("#sourceProjectSelect")?.addEventListener("change",()=>updateTransferPreviewInDialog(dialog));
+   dialog.querySelector("#newProjectTarget")?.addEventListener("input",()=>updateTransferPreviewInDialog(dialog));
+ });
+}
+document.addEventListener("DOMContentLoaded",bindAllCreateProjectDialogs,{once:true});
 
 function buildFullBackup(reason="manual"){
  commitProjectState();

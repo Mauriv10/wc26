@@ -1,8 +1,10 @@
-# Build 704.9.1
+# Build 704.9.2
 
-- Eliminado un bloque HTML duplicado que impedía que el botón Crear proyecto ejecutara el manejador correcto.
-- Ajustes usa una única superficie de desplazamiento compatible con Safari iOS para acceder a todos los interruptores de Extra Stickers.
-- Información, version.json, configuración y caché actualizados a 704.9.1.
+- Base funcional 704.8.2 con Extra Stickers y herramientas de inventario.
+- Corrección robusta de Crear proyecto con diálogos heredados duplicados.
+- Scroll único en Ajustes para Safari/iPhone.
+- Extra Stickers activables por acabado: Epic, Bronce, Plata y Oro.
+- Acciones Vaciar cartas y Completar 1 álbum.
 
 # Build 704.9
 
